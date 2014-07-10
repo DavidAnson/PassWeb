@@ -1,0 +1,29 @@
+CACHE MANIFEST
+# 2014-06-28
+aes.js
+default.css
+default.htm
+default.js
+favicon.ico
+jquery-2.1.1.min.js
+knockout-3.1.0.js
+lz-string-1.3.3.min.js
+sha512.js
+Resources/background.png
+Resources/favicon-114.png
+Resources/favicon-120.png
+Resources/favicon-144.png
+Resources/favicon-144t.png
+Resources/favicon-152.png
+Resources/ArrowDown.svg
+Resources/Close.svg
+Resources/Edit.svg
+Resources/Lock.svg
+Resources/Save.svg
+Resources/Undo.svg
+Resources/Waiting.svg
+Resources/Warning.svg
+NETWORK:
+RemoteStorage
+# Note: CORS HTTP->HTTPS fails in IE 11 and Chrome 34 for the below, consider "*" instead
+#https://example.com/PassWeb/RemoteStorage

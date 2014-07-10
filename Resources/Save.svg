@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16">
+  <clipPath id="group-clip">
+    <path d="M 0,0 L 11,0 L 16,5 L 16,16 L 0,16 Z"/>
+  </clipPath>
+  <g fill="black" clip-path="url(#group-clip)">
+    <rect x="1" y="1" width="14" height="1"/>
+    <rect x="1" y="14" width="14" height="2"/>
+    <rect x="1" y="6" width="14" height="2"/>
+    <rect x="1" y="1" width="2" height="14"/>
+    <rect x="13" y="1" width="2" height="14"/>
+    <rect x="1" y="1" width="3" height="6"/>
+    <rect x="11" y="1" width="4" height="6"/>
+  </g>
+</svg>

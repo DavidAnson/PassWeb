@@ -1,0 +1,220 @@
+body {
+    font-family: "Segoe UI Light", "Segoe UI", GillSans-Light, Helvetica-Light, Arial, Helvetica, sans-serif;
+    background-color: rgb(143, 188, 143); /* darkseagreen */
+    background-image: url(Resources/background.png);
+}
+
+h1 {
+    border-bottom: 1px solid rgba(0, 0, 0, 0.3); /* black, 30% */
+    margin-top: 0;
+}
+
+img {
+    opacity: 0.8;
+}
+
+ul {
+    list-style-type: none;
+    padding: 0;
+    margin: 0;
+}
+
+a, a:active, a:hover, a:visited {
+    color: rgb(0, 0, 205); /* mediumblue */
+    background-color: transparent;
+}
+
+a:active {
+    background-color: rgb(255, 215, 0); /* gold */
+}
+
+.edit, .remove, .handle, .generate, .update, .clear {
+    display: inline-block;
+    line-height: 0;
+}
+
+.icon {
+    width: 16px;
+    height: 16px;
+    padding: 2px;
+}
+
+#loginForm {
+    width: 304px;
+    margin-bottom: 1em;
+}
+
+#status {
+    position: fixed;
+    left: 0;
+    bottom: 0;
+    width: 100%;
+    line-height: 25px;
+    font-style: italic;
+}
+
+#status img {
+    vertical-align: text-bottom;
+}
+
+#status div, #status ul li {
+    padding: 5px;
+    border-top: 1px solid rgba(0, 0, 0, 0.3); /* black, 30% */
+}
+
+#status div {
+    background-color: rgb(255, 215, 0); /* gold */
+}
+
+#status ul li {
+    background-color: rgb(255, 140, 0); /* darkorange */
+}
+
+#filter {
+    -moz-box-sizing: border-box;
+    -webkit-box-sizing: border-box;
+    box-sizing: border-box;
+    width: 304px;
+    margin-bottom: 1em;
+}
+
+#entriesList li, #faqs li {
+    display: inline-block;
+    margin-bottom: 8px;
+    margin-right: 8px;
+    vertical-align: top;
+}
+
+#entriesList .block, #entryForm, #faqs .block {
+    width: 300px;
+    padding: 2px;
+    background-color: rgb(245, 245, 245); /* whitesmoke */
+}
+
+#faqs .block {
+    background-color: rgba(245, 245, 245, 0.3); /* whitesmoke, 30% */
+    border: 1px solid rgba(0, 0, 0, 0.2); /* black, 20% */
+    width: 298px;
+}
+
+#faqs .question {
+    font-weight: bold;
+}
+
+#entriesList .banner {
+    position: relative;
+    border-bottom: 1px dotted rgba(0, 0, 0, 0.5); /* black, 50% */
+}
+
+#entriesList .banner .title {
+    width: 260px;
+}
+
+#entriesList .banner .edit {
+    position: absolute;
+    right: 20px;
+    top: 0;
+}
+
+#entriesList .banner .remove {
+    position: absolute;
+    right: 0;
+    top: 0;
+}
+
+#entriesList .userpass {
+    position: relative;
+}
+
+#entriesList .userpass .username, #entriesList .userpass .password {
+    width: 50%;
+    height: 100%;
+    position: absolute;
+    top: 0;
+}
+
+#entriesList .userpass .password {
+    right: 0;
+    border-left: 1px dotted rgba(0, 0, 0, 0.5); /* black, 50% */
+}
+
+#entriesList .userpass a {
+    display: inline-block;
+    width: 100%;
+    text-decoration: none;
+}
+
+#entriesList .notes {
+    border-top: 1px dotted rgba(0, 0, 0, 0.5); /* black, 50% */
+}
+
+#entriesList .notes .content {
+    overflow-x: auto;
+    margin: 0;
+}
+
+#entriesList .notes .drawer {
+    text-align: center;
+}
+
+#entryForm {
+    margin-bottom: 1em;
+}
+
+#loginForm input, #entryForm input, #entryForm textarea {
+    -moz-box-sizing: border-box;
+    -webkit-box-sizing: border-box;
+    box-sizing: border-box;
+    width: 100%;
+    margin-bottom: 3px;
+}
+
+#entryForm .buttons {
+    position: relative;
+}
+
+#entryForm .buttons .update {
+    position: absolute;
+    right: 20px;
+}
+
+#entryForm .buttons .clear {
+    position: absolute;
+    right: 0;
+}
+
+#entryForm input[type="submit"] {
+    width: 0;
+    height: 0;
+    padding: 0;
+    margin: 0;
+    border: 0;
+    float: left;
+}
+
+.small {
+    display: inline-block;
+    max-width: 304px;
+    font-size: 80%;
+    background-color: rgba(143, 188, 143, 0.5); /* darkseagreen, 50% */
+}
+
+.important {
+    color: rgb(220, 20, 60); /* crimson */
+    font-weight: bold;
+}
+
+.separate {
+    margin-top: 2em;
+}
+
+.dismiss{
+    float: right;
+    opacity: 0.5;
+}
+
+.ellipsis {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}

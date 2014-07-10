@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16">
+  <clipPath id="circle-clip">
+    <path d="M 0,0 L 16,0 L 16,16 L 10,16 L 10,5 L 6,5 L 6,16 L 0,16 Z"/>
+  </clipPath>
+  <clipPath id="rect-clip">
+    <path d="M 0,0 L 16,0 L 16,16 L 0,16 L 0,0 M 4,9 L 12,9 L 12,14 L 4,14 L4,9" clip-rule="evenodd"/>
+  </clipPath>
+  <circle cx="8" cy="5" r="3" stroke="black" stroke-width="2" fill="none" clip-path="url(#circle-clip)"/>
+  <g fill="black">
+    <rect x="4" y="5" width="2" height="3"/>
+    <rect x="10" y="5" width="2" height="3"/>
+    <rect x="2" y="7" width="12" height="9" rx="1" ry="1" clip-path="url(#rect-clip)"/>
+    <rect x="5" y="10" width="6" height="1"/>
+    <rect x="5" y="12" width="6" height="1"/>
+  </g>
+</svg>

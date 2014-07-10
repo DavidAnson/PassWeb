@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" manifest="offline.appcache">
+<head>
+    <meta charset="utf-8"/>
+    <link href="default.css" rel="stylesheet" type="text/css"/>
+    <link rel="shortcut icon" href="favicon.ico"/>
+    <link rel="apple-touch-icon-precomposed" sizes="152x152" href="Resources/favicon-152.png"/>
+    <link rel="apple-touch-icon-precomposed" sizes="144x144" href="Resources/favicon-144.png"/>
+    <link rel="apple-touch-icon-precomposed" sizes="120x120" href="Resources/favicon-120.png"/>
+    <link rel="apple-touch-icon-precomposed" sizes="114x114" href="Resources/favicon-114.png"/>
+    <meta name="msapplication-TileColor" content="#8fbc8f"/>
+    <meta name="msapplication-TileImage" content="Resources/favicon-144t.png"/>
+    <meta name="viewport" content="initial-scale=1, user-scalable=no"/>
+    <meta name="description" content="A simple, secure password manager for the web"/>
+    <title>PassWeb</title>
+</head>
+<body>
+    <h1>PassWeb</h1>
+
+    <div id="loginPage">
+        <form id="loginForm" data-bind="submit: submit" autocomplete="off">
+            <div>
+                <input type="text" data-bind="value: username" placeholder="Name" required="required"/>
+            </div>
+            <div>
+                <input type="password" data-bind="value: password" placeholder="Password" autofocus="autofocus"/>
+            </div>
+            <div>
+                <input type="submit" value="Unlock"/>
+            </div>
+        </form>
+        <div class="small important">Important: Only use PassWeb on trusted devices!</div>
+        <div id="faqs" class="separate" style="display: none" data-bind="visible: true">
+            <ul data-bind="foreach: $root"><!--
+                --><li>
+                    <div class="block">
+                        <div class="question" data-bind="text: question"></div>
+                        <div class="answer" data-bind="text: answer"></div>
+                    </div>
+                </li><!--
+            --></ul>
+        </div>
+        <div class="small separate">Copyright &copy; 2014 by <a href="http://dlaa.me/">David Anson</a>.</div>
+    </div>
+
+    <div id="mainPage" style="display: none">
+        <input id="filter" type="text" data-bind="value: filter, valueUpdate: 'input'" placeholder="Search" accesskey="s"/>
+
+        <ul id="entriesList" data-bind="foreach: filteredEntries"><!--
+            --><li>
+                <div class="block">
+                    <div class="banner">
+                        <div data-bind="visible: website" class="title ellipsis"><a data-bind="text: id, attr: { href: website }" href="#" target="_blank"></a></div>
+                        <div data-bind="visible: !website, text: id" class="title ellipsis"></div>
+                        <a data-bind="click: $root.edit" href="#" class="edit"><img src="Resources/Edit.svg" alt="Edit" title="Edit" class="icon"/></a>
+                        <a data-bind="click: $root.remove" href="#" class="remove"><img src="Resources/Close.svg" alt="Delete" title="Delete" class="icon"/></a>
+                    </div>
+                    <div class="userpass">
+                        <div>&nbsp;</div>
+                        <div class="username"><a data-bind="text: username, click: $root.copyusername" href="#" class="ellipsis"></a></div>
+                        <div class="password"><a data-bind="text: $($element).attr('data-mask'), click: $root.copypassword" data-mask="********" href="#" class="ellipsis"></a></div>
+                    </div>
+                    <div class="notes" data-bind="visible: notes">
+                        <pre data-bind="text: notes, visible: false" class="content"></pre>
+                        <div class="drawer">
+                            <a data-bind="click: $root.togglenotes" href="#" class="handle"><img src="Resources/ArrowDown.svg" alt="Notes" title="Notes" class="icon" /></a>
+                        </div>
+                    </div>
+                </div>
+            </li><!--
+        --></ul>
+
+        <form id="entryForm" data-bind="submit: submit" autocomplete="off">
+            <div data-bind="visible: !expanded()">
+                <a data-bind="click: expand" href="#">New entry...</a>
+            </div>
+            <div data-bind="visible: expanded">
+                <div>
+                    <input type="text" data-bind="value: id" placeholder="Title" required="required"/>
+                </div>
+                <div>
+                    <input type="text" data-bind="value: username" placeholder="User name"/>
+                </div>
+                <div>
+                    <input type="password" data-bind="value: password" placeholder="Password" required="required"/>
+                </div>
+                <div>
+                    <input type="url" data-bind="value: website" placeholder="URL"/>
+                </div>
+                <div>
+                    <textarea data-bind="value: notes" rows="3" placeholder="Notes"></textarea>
+                </div>
+                <div class="buttons">
+                    <a data-bind="click: generatePassword" href="#" class="generate"><img src="Resources/Lock.svg" alt="Generate password" title="Generate password" class="icon"/></a>
+                    <a data-bind="click: clickSubmit" href="#" class="update"><img src="Resources/Save.svg" alt="Save" title="Save" class="icon"/></a>
+                    <a data-bind="click: clear" href="#" class="clear"><img src="Resources/Undo.svg" alt="Clear" title="Clear" class="icon"/></a>
+                </div>
+                <input type="submit" tabindex="-1"/>
+            </div>
+        </form>
+
+        <div class="small"><strong>Reminder</strong>: PassWeb resets after 3 minutes of inactivity. Unsaved edits are discarded, so save promptly!</div>
+        <div class="separate"></div>
+        <div class="small">
+            <a href="#">[Change master password]</a>
+        </div>
+    </div>
+
+    <div id="status">
+        <div data-bind="visible: progress" style="display: none">
+            <img src="Resources/Waiting.svg" alt="Busy" title="Busy" class="icon"/>
+            <span data-bind="text: progress"></span>
+        </div>
+        <ul data-bind="foreach: errors, visible: errors().length" style="display: none">
+            <li>
+                <span class="dismiss">
+                    <a data-bind="click: $parent.removeError" href="#" class="remove"><img src="Resources/Close.svg" alt="Dismiss" title="Dismiss" class="icon"/></a>
+                </span>
+                <img src="Resources/Warning.svg" alt="Warning" title="Warning" class="icon" />
+                <span data-bind="text: message"></span>
+            </li>
+        </ul>
+    </div>
+
+    <script src="jquery-2.1.1.min.js"></script>
+    <script src="knockout-3.1.0.js"></script>
+    <script src="lz-string-1.3.3.min.js"></script>
+    <script src="aes.js"></script>
+    <script src="sha512.js"></script>
+    <script src="default.js"></script>
+</body>
+</html>

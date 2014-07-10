@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16">
+  <clipPath id="circle-clip">
+    <path d="M 0,0 L 0,1 L 8,8 L 8,16 L 16,16 L 16,0 Z"/>
+  </clipPath>
+  <circle cx="8" cy="8" r="6" stroke="black" stroke-width="3" fill="none" clip-path="url(#circle-clip)"/>
+  <polygon points="0.5,0.5 0.5,7.5 7.5,7.5" fill="black"/>
+</svg>
