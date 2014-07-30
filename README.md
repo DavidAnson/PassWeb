@@ -71,11 +71,14 @@ The client is built with HTML, CSS, and JavaScript and uses the [jQuery](http://
   * The ASP.NET code has been exercised more extensively; a test suite helps ensure both implementations behave the same.
 * With the default settings for the server, creation of new blobs is blocked to prevent unwanted users; the administrator should temporarily unblock when creating a login for a new user.
   * In the ASP.NET implementation, this is done by commenting-out the following line in `App_Code\RemoteStorage.cs`:
+
     ```
     // Remove to allow the creation of new files
     #define BLOCK_NEW
     ```
+
   * In the Node.js implementation, this is done by changing the following variable to false in `NodeJs\server.js`:
+
     ```
     // Set to block the creation of new files
     var BLOCK_NEW = true;
