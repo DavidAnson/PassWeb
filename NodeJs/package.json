@@ -1,7 +1,7 @@
 {
   "name": "PassWebNodeServer",
   "version": "0.0.1",
-  "description": "A simple, secure password manager for the web.",
+  "description": "A simple, secure, cloud-based password manager.",
   "author": "David Anson (http://dlaa.me/)",
   "license": "MIT",
   "private": true,
