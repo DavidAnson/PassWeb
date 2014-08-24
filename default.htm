@@ -20,10 +20,10 @@
     <div id="loginPage">
         <form id="loginForm" data-bind="submit: submit" autocomplete="off">
             <div>
-                <input type="text" data-bind="value: username" placeholder="Name" required="required"/>
+                <input type="text" data-bind="textInput: username" placeholder="Name" required="required" />
             </div>
             <div>
-                <input type="password" data-bind="value: password" placeholder="Password" autofocus="autofocus"/>
+                <input type="password" data-bind="textInput: password" placeholder="Password" autofocus="autofocus" />
             </div>
             <div>
                 <input type="submit" value="Unlock"/>
@@ -44,7 +44,7 @@
     </div>
 
     <div id="mainPage" style="display: none">
-        <input id="filter" type="text" data-bind="value: filter, valueUpdate: 'input'" placeholder="Search" accesskey="s"/>
+        <input id="filter" type="text" data-bind="textInput: filter" placeholder="Search" accesskey="s" />
 
         <ul id="entriesList" data-bind="foreach: filteredEntries"><!--
             --><li>
@@ -76,19 +76,19 @@
             </div>
             <div data-bind="visible: expanded">
                 <div>
-                    <input type="text" data-bind="value: id" placeholder="Title" required="required"/>
+                    <input type="text" data-bind="textInput: id" placeholder="Title" required="required" />
                 </div>
                 <div>
-                    <input type="text" data-bind="value: username" placeholder="User name"/>
+                    <input type="text" data-bind="textInput: username" placeholder="User name" />
                 </div>
                 <div>
-                    <input type="password" data-bind="value: password" placeholder="Password" required="required"/>
+                    <input type="password" data-bind="textInput: password" placeholder="Password" required="required" />
                 </div>
                 <div>
-                    <input type="url" data-bind="value: website" placeholder="URL"/>
+                    <input type="url" data-bind="textInput: website" placeholder="URL" />
                 </div>
                 <div>
-                    <textarea data-bind="value: notes" rows="3" placeholder="Notes"></textarea>
+                    <textarea data-bind="textInput: notes" rows="3" placeholder="Notes"></textarea>
                 </div>
                 <div class="buttons">
                     <a data-bind="click: generatePassword" href="#" class="generate"><img src="Resources/Lock.svg" alt="Generate password" title="Generate password" class="icon"/></a>
@@ -123,7 +123,7 @@
     </div>
 
     <script src="jquery-2.1.1.min.js"></script>
-    <script src="knockout-3.1.0.js"></script>
+    <script src="knockout-3.2.0.js"></script>
     <script src="lz-string-1.3.3.min.js"></script>
     <script src="aes.js"></script>
     <script src="sha512.js"></script>
