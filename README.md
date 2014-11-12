@@ -40,7 +40,7 @@ Click an entry's title to open its web site. Click the name/password field to co
 Contact the administrator with the user name you want and he/she will create a new account with a temporary password. Log in, change the master password to something only you know (and won't ever forget!), then create entries for all your accounts.
 
 **What if I'm not online?**
-Open PassWeb as usual to load data from a local (encrypted) cache. Changes are synchronized back to the server the next time you use PassWeb online. Simple updates merge seamlessly; overlapping updates should be avoided.
+Checking the "Cache encrypted passwords" box makes your data available offline. Changes are synchronized with the server next time you use PassWeb online. Simple updates merge seamlessly; overlapping updates should be avoided.
 
 **What if I leave PassWeb open?**
 It's okay: PassWeb logs you out after three minutes of inactivity to protect your data. Names and passwords unmasked for copy+paste are re-masked after ten seconds to prevent anyone nearby from reading them.

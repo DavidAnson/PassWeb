@@ -13,6 +13,7 @@
     // Master user name/pass phrase
     var UserNameUpper;
     var PassPhrase;
+    var CacheLocally;
 
     // String added to hash/encryption key to make each PassWeb instance unique
     var UniqueText = window.location.hostname.toLocaleUpperCase();
@@ -31,8 +32,10 @@
     function LoginForm() {
         var self = this;
         var usernameKey = "username";
+        var cacheKey = "cache";
         self.username = ko.observable(localStorageGetItem(usernameKey));
         self.password = ko.observable();
+        self.cache = ko.observable(true.toString() === localStorageGetItem(cacheKey));
 
         // Handles submit for login
         self.submit = function () {
@@ -41,6 +44,12 @@
             localStorageSetItem(usernameKey, usernameValue);
             UserNameUpper = usernameValue.toLocaleUpperCase();
             PassPhrase = self.password() || "";
+            CacheLocally = !!self.cache();
+            localStorageSetItem(cacheKey, CacheLocally.toString());
+            if (!CacheLocally) {
+                // Delete any previously saved data
+                removeFromLocalStorage();
+            }
             $("#loginPage").hide();
             enableMainPage(true);
             readFromLocalStorage();
@@ -213,7 +222,8 @@
                     username: self.username(),
                     password: self.password(),
                     website: self.website(),
-                    notes: $.trim(self.notes())
+                    notes: $.trim(self.notes()),
+                    weak: ko.observable(isWeakPassword(self.password()))
                 };
                 var existing = userData.entries().filter(function (e) {
                     return 0 === entryComparer(e, entry);
@@ -306,6 +316,9 @@
                            e.hasOwnProperty("website") &&
                            e.hasOwnProperty("notes");
                 }).sort(entryComparer);
+                data.entries.forEach(function (e) {
+                    e.weak = ko.observable(isWeakPassword(e.password));
+                });
                 if (0 === userData.timestamp) {
                     // No data has been loaded yet; use imported data as-is
                     userData.timestamp = data.timestamp;
@@ -402,8 +415,10 @@
 
     // Saves data to local storage
     function saveToLocalStorage() {
-        var item = encode(userData);
-        localStorageSetItem(getCredentialHash(), item);
+        if (CacheLocally) {
+            var item = encode(userData);
+            localStorageSetItem(getCredentialHash(), item);
+        }
     }
 
     // Removes data from local storage
@@ -436,7 +451,9 @@
                 status.showError(result);
             }
         }).fail(function (result) {
-            var message = "Error reading from cloud; using local data. Network problem or bad user name?";
+            var implication = userData.entries().length ? "using local data" : "no local data available";
+            var reason = navigatorOnLine() ? "Network problem or bad user name/password?" : "Network appears offline.";
+            var message = "Error reading from cloud; " + implication + ". (" + reason + ")";
             status.showError(message);
             logNetworkFailure(message, result);
         }).always(function () {
@@ -456,7 +473,9 @@
                 content: encode(userData)
             }
         }).fail(function (result) {
-            var message = "Error saving to cloud; data was saved locally. Cloud will be updated when possible.";
+            var implication = CacheLocally ? "Data was saved locally; cloud will be updated when possible." : "Not caching, so data may be lost when browser is closed!";
+            var reason = navigatorOnLine() ? "" : " (Network appears offline.)";
+            var message = "Error saving to cloud. " + implication + reason;
             status.showError(message);
             logNetworkFailure(message, result);
         }).always(function () {
@@ -506,6 +525,24 @@
         return 1;
     }
 
+    function isWeakPassword(password) {
+        var problem = null;
+        if (password.length < 8) {
+            problem = "Too short";
+        } else if (/^[A-Za-z]+$/.test(password)) {
+            problem = "Only letters";
+        } else if (/^[0-9]+$/.test(password)) {
+            problem = "Only numbers";
+        } else if (/^[A-Za-z0-9]+$/.test(password)) {
+            problem = "No symbols";
+        }
+        if (problem) {
+            return "[Weak: " + problem + "]";
+        } else {
+            return false;
+        }
+    }
+
     // Inactivity timeout reloads the page if the user hasn't interacted with it for a while
     var inactivityTimeout;
     function clearInactivityTimeout() {
@@ -534,6 +571,11 @@
     }
     function localStorageRemoveItem(key) {
         localStorage.removeItem(key);
+    }
+
+    // Safe wrapper for navigator
+    function navigatorOnLine() {
+      return !window.navigator || navigator.onLine;
     }
 
     // Logs a network failure message to the console
@@ -579,8 +621,8 @@
         },
         {
             question: "What if I'm not online?",
-            answer: "Open PassWeb as usual to load data from a local (encrypted) cache. " +
-                "Changes are synchronized back to the server the next time you use PassWeb online. " +
+            answer: "Checking the \"Cache encrypted passwords\" box makes your data available offline. " +
+                "Changes are synchronized with the server next time you use PassWeb online. " +
                 "Simple updates merge seamlessly; overlapping updates should be avoided."
         },
         {

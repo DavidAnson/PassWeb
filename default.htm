@@ -28,6 +28,12 @@
             <div>
                 <input type="submit" value="Unlock"/>
             </div>
+            <div>
+                <label>
+                    <input type="checkbox" data-bind="checked: cache" autocomplete="off" />
+                    <span>Cache encrypted passwords for offline use</span>
+                </label>
+            </div>
         </form>
         <div class="small important">Important: Only use PassWeb on trusted devices!</div>
         <div id="faqs" class="separate" style="display: none" data-bind="visible: true">
@@ -50,15 +56,15 @@
             --><li>
                 <div class="block">
                     <div class="banner">
-                        <div data-bind="visible: website" class="title ellipsis"><a data-bind="text: id, attr: { href: website }" href="#" target="_blank"></a></div>
-                        <div data-bind="visible: !website, text: id" class="title ellipsis"></div>
+                        <div data-bind="visible: website, attr: { title: id }" class="title ellipsis"><a data-bind="text: id, attr: { href: website }" href="#" target="_blank"></a></div>
+                        <div data-bind="visible: !website, text: id, attr: { title: id }" class="title ellipsis"></div>
                         <a data-bind="click: $root.edit" href="#" class="edit"><img src="Resources/Edit.svg" alt="Edit" title="Edit" class="icon"/></a>
                         <a data-bind="click: $root.remove" href="#" class="remove"><img src="Resources/Close.svg" alt="Delete" title="Delete" class="icon"/></a>
                     </div>
                     <div class="userpass">
                         <div>&nbsp;</div>
                         <div class="username"><a data-bind="text: username, click: $root.copyusername" href="#" class="ellipsis"></a></div>
-                        <div class="password"><a data-bind="text: $($element).attr('data-mask'), click: $root.copypassword" data-mask="********" href="#" class="ellipsis"></a></div>
+                        <div class="password" data-bind="css: { weak: weak }, attr: { title: weak }"><a data-bind="text: $($element).attr('data-mask'), click: $root.copypassword" data-mask="********" href="#" class="ellipsis"></a></div>
                     </div>
                     <div class="notes" data-bind="visible: notes">
                         <pre data-bind="text: notes, visible: false" class="content"></pre>
