@@ -99,7 +99,8 @@
             var filterUpper = self.filter().toLocaleUpperCase();
             if (0 < filterUpper.length) {
                 return self.entries().filter(function (e) {
-                    return -1 !== e.id.toLocaleUpperCase().indexOf(filterUpper);
+                    return ((-1 !== e.id.toLocaleUpperCase().indexOf(filterUpper)) ||
+                            (-1 !== (e.username || "").toLocaleUpperCase().indexOf(filterUpper)));
                 });
             }
             return self.entries();
