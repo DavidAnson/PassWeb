@@ -78,11 +78,11 @@
 
         <form id="entryForm" data-bind="submit: submit" autocomplete="off">
             <div data-bind="visible: !expanded()">
-                <a data-bind="click: expand" href="#">New entry...</a>
+                <a data-bind="click: expand, attr: { accesskey: linkAccessKey }" href="#">New entry...</a>
             </div>
             <div data-bind="visible: expanded">
                 <div>
-                    <input type="text" data-bind="textInput: id" placeholder="Title" required="required" />
+                    <input type="text" data-bind="textInput: id, attr: { accesskey: inputAccessKey }" placeholder="Title" required="required" />
                 </div>
                 <div>
                     <input type="text" data-bind="textInput: username" placeholder="User name" />
@@ -128,7 +128,7 @@
         </ul>
     </div>
 
-    <script src="jquery-2.1.1.min.js"></script>
+    <script src="jquery-2.1.3.min.js"></script>
     <script src="knockout-3.2.0.js"></script>
     <script src="lz-string-1.3.3.min.js"></script>
     <script src="aes.js"></script>

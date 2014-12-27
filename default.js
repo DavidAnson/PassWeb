@@ -1,6 +1,6 @@
 /// <reference path="aes.js"/>
 /// <reference path="sha512.js"/>
-/// <reference path="jquery-2.1.1.js"/>
+/// <reference path="jquery-2.1.3.js"/>
 /// <reference path="knockout-3.2.0.debug.js"/>
 /// <reference path="lz-string-1.3.3.js"/>
 
@@ -186,6 +186,8 @@
         self.password = ko.observable();
         self.website = ko.observable();
         self.notes = ko.observable();
+        self.linkAccessKey = ko.observable("n");
+        self.inputAccessKey = ko.observable(null);
 
         // Clears the entry form
         self.clear = function () {
@@ -253,6 +255,8 @@
         // Expands the entry form
         self.expand = function () {
             resetInactivityTimeout();
+            self.linkAccessKey(null);
+            self.inputAccessKey("n");
             self.expanded(true);
             var entryFormElement = $("#entryForm");
             entryFormElement[0].scrollIntoView();
