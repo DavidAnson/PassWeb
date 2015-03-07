@@ -2,7 +2,7 @@
 /// <reference path="sha512.js"/>
 /// <reference path="jquery-2.1.3.js"/>
 /// <reference path="knockout-3.3.0.debug.js"/>
-/// <reference path="lz-string-1.3.3.js"/>
+/// <reference path="lz-string.js"/>
 
 /* jshint browser: true, jquery: true, bitwise: true, curly: true, eqeqeq: true, forin: true, freeze: true, immed: true, indent: 4, latedef: true, newcap: true, noarg: true, noempty: true, nonbsp: true, nonew: true, quotmark: double, undef: true, unused: true, strict: true, trailing: true */
 /* global ko, CryptoJS, LZString */

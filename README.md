@@ -117,7 +117,7 @@ File | Purpose
 -----|--------
 default.htm <br/> default.js <br/> default.css | PassWeb implementation
 offline.appcache | Offline cache manifest
-jquery-2.1.3.min.js <br/> knockout-3.3.0.js <br/> lz-string-1.3.3.min.js <br/> aes.js <br/> sha512.js <br/> | External libraries
+jquery-2.1.3.min.js <br/> knockout-3.3.0.js <br/> lz-string.min.js <br/> aes.js <br/> sha512.js <br/> | External libraries
 favicon.ico <br/> Resources\\\*.png <br/> Resources\\\*.svg <br/> | Image resources
 App_Code\RemoteStorage.cs <br/> Web.config <br/> *App_Data\\PassWeb\\...* | ASP.NET server
 NodeJs\\server.js <br/> NodeJs\\package.json <br/> *NodeJs\\App_Data\\...* | Node.js server
