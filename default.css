@@ -24,10 +24,6 @@ a, a:active, a:hover, a:visited {
     background-color: transparent;
 }
 
-a:active {
-    background-color: rgb(255, 215, 0); /* gold */
-}
-
 .edit, .remove, .handle, .generate, .update, .clear {
     display: inline-block;
     line-height: 0;
@@ -140,6 +136,10 @@ a:active {
 
 #entriesList .userpass .weak :hover {
     background-color: rgba(255, 0, 0, 0.3); /* red, 30% */
+}
+
+#entriesList .userpass .clipboard.copied { /* "copied" used for specificity vs. ":hover" */
+    background-color: rgba(0, 255, 0, 0.3); /* green, 30% */
 }
 
 #entriesList .userpass a {

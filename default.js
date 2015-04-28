@@ -147,8 +147,10 @@
 
         // Copies text to the clipboard or unmasks an element and selects its text
         self.copytext = function (text, element) {
-            if (!window.clipboardData || !window.clipboardData.setData("Text", text)) { // clipboardData API only supported by Internet Explorer
-                var $element = $(element);
+            var $element = $(element);
+            // clipboardData API only supported by Internet Explorer
+            var copySuccess = window.clipboardData && window.clipboardData.setData("Text", text);
+            if (!copySuccess) {
                 $element.text(text);
                 if (self.contentEditableNeeded()) {
                     // Required on iOS Safari to show the selection
@@ -160,11 +162,33 @@
                 range.setStart(element, 0); // Note: selectNode API is not as reliable (especially on iOS Safari)
                 range.setEnd(element, 1);
                 selection.addRange(range);
-                // Set a timer to re-mask the text
-                setTimeout(function () {
+                // Try to copy to the clipboard
+                try {
+                    copySuccess = document.execCommand("copy");
+                    if (window.clipboardData) {
+                        // When permission is denied in IE, execCommand still returns true
+                        copySuccess = false;
+                    }
+                } catch (ignore) {
+                    // Treat SecurityError as failure
+                }
+                var reMaskText = function () {
                     $element.removeAttr("contentEditable");
                     $element.text($element.attr("data-mask") || text);
-                }, 10 * 1000); // 10 seconds
+                };
+                if (copySuccess) {
+                    // Re-mask text immediately
+                    reMaskText();
+                } else {
+                    // Set a timer to re-mask the text after being copied
+                    setTimeout(reMaskText, 10 * 1000); // 10 seconds
+                }
+            }
+            if (copySuccess) {
+                $element.addClass("clipboard copied");
+                setTimeout(function removeCopied() {
+                    $element.removeClass("clipboard copied");
+                }, 0.2 * 1000); // 0.2 second
             }
         };
 
