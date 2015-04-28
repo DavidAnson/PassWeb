@@ -568,17 +568,17 @@
 
     // Safe wrappers for localStorage
     function localStorageGetItem(key) {
-        return localStorage.getItem(key);
+        return localStorage && localStorage.getItem(key);
     }
     function localStorageSetItem(key, data) {
         try {
-            localStorage.setItem(key, data);
+            return localStorage && localStorage.setItem(key, data);
         } catch (ignore) {
             // Ignore failure (ex: private mode)
         }
     }
     function localStorageRemoveItem(key) {
-        localStorage.removeItem(key);
+        return localStorage && localStorage.removeItem(key);
     }
 
     // Safe wrapper for navigator
