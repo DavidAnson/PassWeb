@@ -95,16 +95,17 @@
         self.filter = ko.observable("");
 
         // Filters the entries according to the search text
-        self.filteredEntries = ko.computed(function () {
+        function filterEntries() {
             var filterUpper = self.filter().toLocaleUpperCase();
-            if (0 < filterUpper.length) {
-                return self.entries().filter(function (e) {
-                    return ((-1 !== e.id.toLocaleUpperCase().indexOf(filterUpper)) ||
-                            (-1 !== (e.username || "").toLocaleUpperCase().indexOf(filterUpper)));
-                });
-            }
-            return self.entries();
-        });
+            self.entries().forEach(function (entry) {
+                var visible = (0 === filterUpper.length) ||
+                               ((-1 !== entry.id.toLocaleUpperCase().indexOf(filterUpper)) ||
+                                (-1 !== (entry.username || "").toLocaleUpperCase().indexOf(filterUpper)));
+                entry.visible(visible);
+            });
+        }
+        self.entries.subscribe(filterEntries);
+        self.filter.subscribe(filterEntries);
 
         // Copies/unhides+selects the user name
         self.copyusername = function (entry, event) {
@@ -226,7 +227,8 @@
                     password: self.password(),
                     website: self.website(),
                     notes: $.trim(self.notes()),
-                    weak: ko.observable(isWeakPassword(self.password()))
+                    weak: ko.observable(isWeakPassword(self.password())),
+                    visible: ko.observable(true)
                 };
                 var existing = userData.entries().filter(function (e) {
                     return 0 === entryComparer(e, entry);
@@ -323,6 +325,7 @@
                 }).sort(entryComparer);
                 data.entries.forEach(function (e) {
                     e.weak = ko.observable(isWeakPassword(e.password));
+                    e.visible = ko.observable(true);
                 });
                 if (0 === userData.timestamp) {
                     // No data has been loaded yet; use imported data as-is

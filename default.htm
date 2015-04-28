@@ -52,8 +52,8 @@
     <div id="mainPage" style="display: none">
         <input id="filter" type="text" data-bind="textInput: filter" placeholder="Search" accesskey="s" />
 
-        <ul id="entriesList" data-bind="foreach: filteredEntries"><!--
-            --><li>
+        <ul id="entriesList" data-bind="foreach: entries"><!--
+            --><li data-bind="visible: visible">
                 <div class="block">
                     <div class="banner">
                         <div data-bind="visible: website, attr: { title: id }" class="title ellipsis"><a data-bind="text: id, attr: { href: website }" href="#" target="_blank"></a></div>
