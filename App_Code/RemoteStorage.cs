@@ -10,6 +10,9 @@
 // Restore to enable simple support for Cross-Origin Resource Sharing
 //#define SIMPLE_CORS
 
+// Remove to allow requests to be handled as fast as possible
+#define THROTTLE_REQUESTS
+
 using System;
 using System.Diagnostics;
 using System.IO;
@@ -17,17 +20,82 @@ using System.Linq;
 using System.Net.Mime;
 using System.Text;
 using System.Text.RegularExpressions;
+using System.Threading.Tasks;
 using System.Web;
 
 /// <summary>
 /// HTTP Handler that provides a simple REST API for PassWeb to create/read/update/delete data files on the server.
 /// </summary>
-public class RemoteStorage : IHttpHandler
+public class RemoteStorage :
+#if THROTTLE_REQUESTS
+    IHttpAsyncHandler
+#else
+    IHttpHandler
+#endif
 {
 #if SIMPLE_CORS
     // CORS header names
     private const string OriginHeaderName = "Origin";
     private const string AccessControlAllowOriginHeaderName = "Access-Control-Allow-Origin";
+#endif
+
+#if THROTTLE_REQUESTS
+    // Time at which request throttling expires
+    private static DateTime _throttleExpiration = DateTime.UtcNow;
+    private static object _throttleExpirationLock = new object();
+
+    /// <summary>
+    /// Initiates an asynchronous call to the HTTP handler.
+    /// </summary>
+    /// <param name="context">An HttpContext object that provides references to intrinsic server objects (for example, Request, Response, Session, and Server) used to service HTTP requests.</param>
+    /// <param name="cb">The AsyncCallback to call when the asynchronous method call is complete. If cb is null, the delegate is not called.</param>
+    /// <param name="extraData">Any extra data needed to process the request.</param>
+    /// <returns>An IAsyncResult that contains information about the status of the process.</returns>
+    public IAsyncResult BeginProcessRequest(HttpContext context, AsyncCallback cb, object extraData)
+    {
+        // Throttle requests to slow enumeration of storage files
+        TimeSpan waitDuration;
+        lock (_throttleExpirationLock)
+        {
+            // Calculate wait duration
+            var utcNow = DateTime.UtcNow;
+            waitDuration = _throttleExpiration - utcNow;
+
+            // Set new expiration time
+            _throttleExpiration = utcNow.AddSeconds(1);
+            if (0 < waitDuration.Ticks)
+            {
+                // Extend expiration by remaining time for current delay
+                _throttleExpiration = _throttleExpiration.Add(waitDuration);
+            }
+            else
+            {
+                // Process request immediately
+                waitDuration = TimeSpan.Zero;
+            }
+        }
+
+        // Start a task to asynchronously process the request
+        return Task
+            .Delay(waitDuration)
+            .ContinueWith(_ =>
+            {
+                ProcessRequest(context);
+            }).ContinueWith(task =>
+            {
+                cb(task);
+            });
+    }
+
+    /// <summary>
+    /// Provides an asynchronous process End method when the process ends.
+    /// </summary>
+    /// <param name="result">An IAsyncResult that contains information about the status of the process.</param>
+    public void EndProcessRequest(IAsyncResult result)
+    {
+        // Propagate any exceptions from the task
+        ((Task)result).Wait();
+    }
 #endif
 
     /// <summary>

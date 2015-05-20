@@ -10,6 +10,8 @@ var ALLOW_LIST = false;
 var BACKUP_FILE = true;
 // Set to block the creation of new files
 var BLOCK_NEW = true;
+// Set to allow requests to be handled as fast as possible
+var THROTTLE_REQUESTS = true;
 // Set to host static content (HTML/CSS/JS) for the client component
 var STATIC_SERVER = false;
 
@@ -18,6 +20,7 @@ var fs = require("fs");
 var path = require("path");
 var stream = require("stream");
 var artificialPrecision = 0;
+var throttleExpiration = Date.now();
 
 // Maps a file name to a fully-qualified local path
 function mapFileName(fileName, callback) {
@@ -275,7 +278,17 @@ app.route("/RemoteStorage")
     // Log request and set response type, then hand off to next route
     console.log(req.method + " " + req.url);
     res.type("text");
-    next();
+    // Throttle requests to slow enumeration of storage files
+    if (THROTTLE_REQUESTS) {
+      var now = Date.now();
+      var waitDuration = Math.max(throttleExpiration - now, 0);
+      throttleExpiration = now + 1000 + waitDuration;
+      setTimeout(function() {
+        next();
+      }, waitDuration);
+    } else {
+      next();
+    }
   })
   .put(writeFile)
   .get(function(req, res) {
