@@ -211,6 +211,7 @@
         self.password = ko.observable();
         self.website = ko.observable();
         self.notes = ko.observable();
+        self.populatedFrom = null;
         self.linkAccessKey = ko.observable("n");
         self.inputAccessKey = ko.observable(null);
 
@@ -222,6 +223,7 @@
             self.password("");
             self.website("");
             self.notes("");
+            self.populatedFrom = null;
         };
         self.clear();
 
@@ -237,6 +239,7 @@
             self.password(entry.password);
             self.website(entry.website);
             self.notes(entry.notes);
+            self.populatedFrom = entry;
             self.expand();
         };
 
@@ -257,7 +260,13 @@
                 var existing = userData.entries().filter(function (e) {
                     return 0 === entryComparer(e, entry);
                 });
-                if ((0 === existing.length) || window.confirm("Update existing entry?")) {
+                if ((0 === existing.length) || window.confirm("Update existing entry \"" + entry.id + "\"?")) {
+                    if (self.populatedFrom &&
+                        (0 !== entryComparer(entry, self.populatedFrom)) &&
+                        (-1 !== userData.entries().indexOf(self.populatedFrom)) &&
+                        window.confirm("Remove previous entry \"" + self.populatedFrom.id + "\"?")) {
+                        userData.entries.remove(self.populatedFrom);
+                    }
                     userData.entries.removeAll(existing);
                     userData.entries.push(entry);
                     userData.entries.sort(entryComparer);
