@@ -206,6 +206,25 @@ a, a:active, a:hover, a:visited {
     float: left;
 }
 
+#entryForm .passwordSettings {
+    border: 1px solid black;
+    background-color: white;
+}
+
+#entryForm .radioLabel {
+    width: 20%;
+    display: inline-block;
+}
+
+#entryForm .checkLabel {
+    width: 50%;
+    display: inline-block;
+}
+
+#entryForm input[type="radio"], #entryForm input[type="checkbox"] {
+    width: auto;
+}
+
 .small {
     display: inline-block;
     max-width: 304px;

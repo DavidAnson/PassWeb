@@ -212,12 +212,22 @@
         self.website = ko.observable();
         self.notes = ko.observable();
         self.populatedFrom = null;
+        self.generating = ko.observable(false);
+        self.passwordLength = ko.observable("16");
+        self.passwordLower = ko.observable(true);
+        self.passwordUpper = ko.observable(true);
+        self.passwordNumbers = ko.observable(true);
+        self.passwordSymbols = ko.observable(true);
         self.linkAccessKey = ko.observable("n");
         self.inputAccessKey = ko.observable(null);
+        self.passwordInput = ko.computed(function () {
+            return self.generating() ? "text" : "password";
+        });
 
         // Clears the entry form
         self.clear = function () {
             resetInactivityTimeout();
+            self.generating(false);
             self.id("");
             self.username("");
             self.password("");
@@ -234,6 +244,7 @@
 
         // Populates the form by copying fields from an entry
         self.populateFrom = function (entry) {
+            self.clear();
             self.id(entry.id);
             self.username(entry.username);
             self.password(entry.password);
@@ -301,22 +312,37 @@
         // Generates a random/secure password
         self.generatePassword = function () {
             resetInactivityTimeout();
-            var pool = "!\"#$%&'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_`abcdefghijklmnopqrstuvwxyz{|}~";
-            var password = "";
-            var i;
-            for (i = 0; i < 16; i++) {
-                password += (pool[self.getRandomInt(0, pool.length - 1)]);
-            }
-            var message = "Random password for this entry:";
-            var promptResult = window.prompt(message, password);
-            if (promptResult || ("" === promptResult)) {
-                self.password(promptResult);
-            } else if (undefined === promptResult) {
-                // Windows 8 immersive/metro Internet Explorer does not support window.prompt (http://dlaa.me/blog/post/windowprompt)
+            if (self.expanded() && (self.generating() || !self.password().length)) {
+                var pool = "";
+                if (self.passwordLower()) {
+                    pool += "abcdefghijklmnopqrstuvwxyz";
+                }
+                if (self.passwordUpper()) {
+                    pool += "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+                }
+                if (self.passwordNumbers()) {
+                    pool += "0123456789";
+                }
+                if (self.passwordSymbols()) {
+                    pool += "!\"#$%&'()*+,-./:;<=>?@[\\]^_`{|}~";
+                }
+                var password = "";
+                if (pool.length) {
+                    var i;
+                    for (i = 0; i < self.passwordLength() ; i++) {
+                        password += (pool[self.getRandomInt(0, pool.length - 1)]);
+                    }
+                }
                 self.password(password);
-                window.alert(message + " " + password);
+                $("#password").select();
             }
+            self.generating(true);
         };
+
+        // Subscriptions to re-generate when password settings change
+        [self.passwordLength, self.passwordLower, self.passwordUpper, self.passwordNumbers, self.passwordSymbols].forEach(function (observable) {
+            observable.subscribe(self.generatePassword, self);
+        });
 
         // Gets a random integer between min and max (inclusive)
         self.getRandomInt = function (min, max) {
