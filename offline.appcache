@@ -1,11 +1,11 @@
 CACHE MANIFEST
-# 2015-05-26
+# 2015-05-27
 aes.js
 default.css
 default.htm
 default.js
 favicon.ico
-jquery-2.1.3.min.js
+jquery-2.1.4.min.js
 knockout-3.3.0.js
 lz-string.min.js
 sha512.js

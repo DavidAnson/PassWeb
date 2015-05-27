@@ -1,6 +1,6 @@
 /// <reference path="aes.js"/>
 /// <reference path="sha512.js"/>
-/// <reference path="jquery-2.1.3.js"/>
+/// <reference path="jquery-2.1.4.js"/>
 /// <reference path="knockout-3.3.0.debug.js"/>
 /// <reference path="lz-string.js"/>
 
