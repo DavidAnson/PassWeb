@@ -344,9 +344,21 @@
             observable.subscribe(self.generatePassword, self);
         });
 
+        // Gets a random floating-point number between 0 (inclusive) and 1 (exclusive)
+        self.getRandomFloat = function () {
+            try {
+                // No feature-detection; need to handle QuotaExceededError regardless
+                var array = new Uint32Array(1);
+                window.crypto.getRandomValues(array);
+                return (array[0] & ((1 << 30) - 1)) / (1 << 30);
+            } catch (ex) {
+                return Math.random();
+            }
+        };
+
         // Gets a random integer between min and max (inclusive)
         self.getRandomInt = function (min, max) {
-            return Math.floor((Math.random() * (max - min + 1)) + min);
+            return Math.floor((self.getRandomFloat() * (max - min + 1)) + min);
         };
     }
     var entryForm = new EntryForm();
