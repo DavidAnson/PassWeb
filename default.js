@@ -1,9 +1,3 @@
-/// <reference path="aes.js"/>
-/// <reference path="sha512.js"/>
-/// <reference path="jquery-2.1.4.js"/>
-/// <reference path="knockout-3.4.0.debug.js"/>
-/// <reference path="lz-string.js"/>
-
 /* jshint browser: true, jquery: true, bitwise: true, curly: true, eqeqeq: true, forin: true, freeze: true, immed: true, indent: 4, latedef: true, newcap: true, noarg: true, noempty: true, nonbsp: true, nonew: true, quotmark: double, undef: true, unused: true, strict: true, trailing: true */
 /* global ko, CryptoJS, LZString */
 
@@ -33,18 +27,18 @@
         var self = this;
         var usernameKey = "username";
         var cacheKey = "cache";
-        self.username = ko.observable(localStorageGetItem(usernameKey));
-        self.password = ko.observable();
+        self.username = ko.observable(localStorageGetItem(usernameKey) || "");
+        self.password = ko.observable("");
         self.cache = ko.observable(true.toString() === localStorageGetItem(cacheKey));
 
         // Handles submit for login
         self.submit = function () {
             resetInactivityTimeout();
-            var usernameValue = self.username() || "";
+            var usernameValue = self.username();
             localStorageSetItem(usernameKey, usernameValue);
             UserNameUpper = usernameValue.toLocaleUpperCase();
-            PassPhrase = self.password() || "";
-            CacheLocally = !!self.cache();
+            PassPhrase = self.password();
+            CacheLocally = self.cache();
             localStorageSetItem(cacheKey, CacheLocally.toString());
             if (!CacheLocally) {
                 // Delete any previously saved data
@@ -205,14 +199,14 @@
     // Implementation of the entry form
     function EntryForm() {
         var self = this;
-        self.expanded = ko.observable(false);
+        self.expanded = ko.observable(0);
         self.id = ko.observable();
         self.username = ko.observable();
         self.password = ko.observable();
         self.website = ko.observable();
         self.notes = ko.observable();
         self.populatedFrom = null;
-        self.generating = ko.observable(false);
+        self.generating = ko.observable();
         self.passwordLength = ko.observable("16");
         self.passwordLower = ko.observable(true);
         self.passwordUpper = ko.observable(true);
@@ -227,7 +221,7 @@
         // Clears the entry form
         self.clear = function () {
             resetInactivityTimeout();
-            self.generating(false);
+            self.generating(0);
             self.id("");
             self.username("");
             self.password("");
@@ -265,7 +259,7 @@
                     password: self.password(),
                     website: self.website(),
                     notes: $.trim(self.notes()),
-                    weak: ko.observable(isWeakPassword(self.password())),
+                    weak: isWeakPassword(self.password()),
                     visible: ko.observable(true)
                 };
                 var existing = userData.entries().filter(function (e) {
@@ -334,9 +328,9 @@
                     }
                 }
                 self.password(password);
-                $("#password").select();
             }
-            self.generating(true);
+            $("#password").select();
+            self.generating(self.generating() + 1);
         };
 
         // Subscriptions to re-generate when password settings change
@@ -395,7 +389,7 @@
                            e.hasOwnProperty("notes");
                 }).sort(entryComparer);
                 data.entries.forEach(function (e) {
-                    e.weak = ko.observable(isWeakPassword(e.password));
+                    e.weak = isWeakPassword(e.password);
                     e.visible = ko.observable(true);
                 });
                 if (0 === userData.timestamp) {
@@ -472,6 +466,27 @@
             return "Unsupported schema or corrupt data.";
         }
         return null;
+    }
+
+    function changeMasterPassword() {
+        // Prompt to change master password
+        var newPassPhrase = window.prompt("New master password:", "");
+        if (newPassPhrase || ("" === newPassPhrase)) {
+            var previousPassPhrase = PassPhrase;
+            var previousCredentialHash = getCredentialHash();
+            removeFromLocalStorage();
+            PassPhrase = newPassPhrase;
+            updateTimestampAndSaveToAllStorage(previousCredentialHash).then(function () {
+                // Success, clean up remote storage
+                removeFromRemoteStorage(previousCredentialHash);
+            }).fail(function () {
+                // Failure, restore old password locally (already unchanged remotely)
+                removeFromLocalStorage();
+                PassPhrase = previousPassPhrase;
+                saveToLocalStorage();
+                status.showError("Master password update failed; password unchanged!");
+            });
+        }
     }
 
     // Update data timestamp and save to local/remote
@@ -618,7 +633,7 @@
         if (problem) {
             return "[Weak: " + problem + "]";
         } else {
-            return false;
+            return "";
         }
     }
 
@@ -745,29 +760,10 @@
         $("#mainPage input").add("#mainPage textarea").on("input", resetInactivityTimeout);
         $(window).on("scroll", resetInactivityTimeout);
         $("#mainPage .small a").on("click", function (event) {
-            // Prompt to change master password
-            var newPassPhrase = window.prompt("New master password:", "");
-            if (newPassPhrase || ("" === newPassPhrase)) {
-                var previousPassPhrase = PassPhrase;
-                var previousCredentialHash = getCredentialHash();
-                removeFromLocalStorage();
-                PassPhrase = newPassPhrase;
-                updateTimestampAndSaveToAllStorage(previousCredentialHash).then(function () {
-                    // Success, clean up remote storage
-                    removeFromRemoteStorage(previousCredentialHash);
-                }).fail(function () {
-                    // Failure, restore old password locally (already unchanged remotely)
-                    removeFromLocalStorage();
-                    PassPhrase = previousPassPhrase;
-                    saveToLocalStorage();
-                    status.showError("Master password update failed; password unchanged!");
-                });
-            }
+            changeMasterPassword();
             event.preventDefault();
         });
         // setTimeout call works around an Internet Explorer bug where textarea/placeholder's input event fires asynchronously on load (http://dlaa.me/blog/post/inputplaceholder)
-        window.setTimeout(function () {
-            clearInactivityTimeout();
-        }, 10);
+        window.setTimeout(clearInactivityTimeout, 10);
     });
 })();
