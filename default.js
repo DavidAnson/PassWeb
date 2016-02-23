@@ -1,5 +1,5 @@
 /* jshint browser: true, jquery: true, bitwise: true, curly: true, eqeqeq: true, forin: true, freeze: true, immed: true, indent: 4, latedef: true, newcap: true, noarg: true, noempty: true, nonbsp: true, nonew: true, quotmark: double, undef: true, unused: true, strict: true, trailing: true */
-/* global ko, CryptoJS, LZString */
+/* global render, ko, CryptoJS, LZString */
 
 (function (undefined) {
     "use strict";
@@ -44,11 +44,9 @@
                 // Delete any previously saved data
                 removeFromLocalStorage();
             }
-            $("#loginPage").hide();
             enableMainPage(true);
             readFromLocalStorage();
             readFromRemoteStorage();
-            return false;
         };
     }
     var loginForm = new LoginForm();
@@ -87,16 +85,16 @@
         self.timestamp = 0;
         self.entries = ko.observableArray();
         self.filter = ko.observable("");
+        self.visibleEntries = ko.observableArray(self.entries());
 
         // Filters the entries according to the search text
         function filterEntries() {
             var filterUpper = self.filter().toLocaleUpperCase();
-            self.entries().forEach(function (entry) {
-                var visible = (0 === filterUpper.length) ||
-                               ((-1 !== entry.id.toLocaleUpperCase().indexOf(filterUpper)) ||
-                                (-1 !== (entry.username || "").toLocaleUpperCase().indexOf(filterUpper)));
-                entry.visible(visible);
-            });
+            self.visibleEntries(self.entries().filter(function (entry) {
+                return (0 === filterUpper.length) ||
+                       (-1 !== entry.id.toLocaleUpperCase().indexOf(filterUpper)) ||
+                       (-1 !== (entry.username || "").toLocaleUpperCase().indexOf(filterUpper));
+            }));
         }
         self.entries.subscribe(filterEntries);
         self.filter.subscribe(filterEntries);
@@ -114,14 +112,8 @@
         };
 
         // Toggles the display of the notes field for an entry
-        self.togglenotes = function (entry, event) {
+        self.togglenotes = function () {
             resetInactivityTimeout();
-            var content = $(event.target).closest(".notes").find(".content").first();
-            if (content.is(":visible")) {
-                content.hide();
-            } else {
-                content.show();
-            }
         };
 
         // Populates the entry field with an entry's data
@@ -212,11 +204,6 @@
         self.passwordUpper = ko.observable(true);
         self.passwordNumbers = ko.observable(true);
         self.passwordSymbols = ko.observable(true);
-        self.linkAccessKey = ko.observable("n");
-        self.inputAccessKey = ko.observable(null);
-        self.passwordInput = ko.computed(function () {
-            return self.generating() ? "text" : "password";
-        });
 
         // Clears the entry form
         self.clear = function () {
@@ -259,8 +246,7 @@
                     password: self.password(),
                     website: self.website(),
                     notes: $.trim(self.notes()),
-                    weak: isWeakPassword(self.password()),
-                    visible: ko.observable(true)
+                    weak: isWeakPassword(self.password())
                 };
                 var existing = userData.entries().filter(function (e) {
                     return 0 === entryComparer(e, entry);
@@ -284,7 +270,6 @@
                 // Validation for browsers that don't support HTML validation
                 window.alert("Incomplete or invalid entry.");
             }
-            return false;
         };
 
         // Simulates a click of submit button so browser will run HTML form validation
@@ -295,12 +280,7 @@
         // Expands the entry form
         self.expand = function () {
             resetInactivityTimeout();
-            self.linkAccessKey(null);
-            self.inputAccessKey("n");
-            self.expanded(true);
-            var entryFormElement = $("#entryForm");
-            entryFormElement[0].scrollIntoView();
-            entryFormElement.find("input")[0].focus();
+            self.expanded(self.expanded() + 1);
         };
 
         // Generates a random/secure password
@@ -329,7 +309,6 @@
                 }
                 self.password(password);
             }
-            $("#password").select();
             self.generating(self.generating() + 1);
         };
 
@@ -358,13 +337,11 @@
     var entryForm = new EntryForm();
 
     // Enables the main page UI
+    var loginPageVisible = ko.observable(true);
+    var mainPageVisible = ko.observable(false);
     function enableMainPage(enable) {
-        var mainPage = $("#mainPage");
-        if (enable) {
-            mainPage.show();
-        } else {
-            mainPage.hide();
-        }
+        loginPageVisible(false);
+        mainPageVisible(enable);
     }
 
     // Merges imported data with what has already been loaded
@@ -390,7 +367,6 @@
                 }).sort(entryComparer);
                 data.entries.forEach(function (e) {
                     e.weak = isWeakPassword(e.password);
-                    e.visible = ko.observable(true);
                 });
                 if (0 === userData.timestamp) {
                     // No data has been loaded yet; use imported data as-is
@@ -749,21 +725,20 @@
         },
     ];
 
-    $(function () {
-        // Initialize
-        ko.applyBindings(loginForm, $("#loginForm")[0]);
-        ko.applyBindings(faqs, $("#faqs")[0]);
-        ko.applyBindings(status, $("#status")[0]);
-        ko.applyBindings(userData, $("#entriesList")[0]);
-        ko.applyBindings(userData, $("#filter")[0]);
-        ko.applyBindings(entryForm, $("#entryForm")[0]);
-        $("#mainPage input").add("#mainPage textarea").on("input", resetInactivityTimeout);
-        $(window).on("scroll", resetInactivityTimeout);
-        $("#mainPage .small a").on("click", function (event) {
-            changeMasterPassword();
-            event.preventDefault();
-        });
-        // setTimeout call works around an Internet Explorer bug where textarea/placeholder's input event fires asynchronously on load (http://dlaa.me/blog/post/inputplaceholder)
-        window.setTimeout(clearInactivityTimeout, 10);
+    // Initialize
+    render({
+        app: {
+            loginPageVisible: loginPageVisible,
+            mainPageVisible: mainPageVisible,
+            changeMasterPassword: changeMasterPassword,
+            resetInactivityTimeout: resetInactivityTimeout
+        },
+        loginForm: loginForm,
+        faqs: faqs,
+        status: status,
+        userData: userData,
+        entryForm: entryForm
     });
+    // setTimeout call works around an Internet Explorer bug where textarea/placeholder's input event fires asynchronously on load (http://dlaa.me/blog/post/inputplaceholder)
+    window.setTimeout(clearInactivityTimeout, 10);
 })();

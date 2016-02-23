@@ -1,5 +1,5 @@
 CACHE MANIFEST
-# 2015-12-16
+# 2016-02-22
 aes.js
 default.css
 default.htm
@@ -8,6 +8,9 @@ favicon.ico
 jquery-2.1.4.min.js
 knockout-3.4.0.js
 lz-string.min.js
+react.min.js
+react-dom.min.js
+render.js
 sha512.js
 Resources/background.png
 Resources/favicon-114.png
