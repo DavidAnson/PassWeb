@@ -304,7 +304,6 @@ const Status = React.createClass({
   onRemove: function(error, e) {
     e.preventDefault();
     this.props.status.removeError(error);
-    this.setState({ errors: this.props.status.errors() });
   },
   render: function() {
     const waiting = this.state.progress ? (
@@ -340,4 +339,25 @@ function render(context) {
     <App context={context} app={context.app}/>,
     document.getElementById("appContainer")
   );
+}
+
+// Simple replacement for Knockout.js observable
+function observable(initial) {
+  let value = initial;
+  let observers = [];
+  const obj = function(newValue, forceUpdate) {
+    if (!arguments.length) {
+      return value;
+    }
+    if ((value !== newValue) || forceUpdate) {
+      value = newValue;
+      observers.forEach((observer) => {
+        observer(value);
+      });
+    }
+  };
+  obj.subscribe = (cb) => {
+    observers.push(cb);
+  };
+  return obj;
 }

@@ -1,5 +1,5 @@
 /* jshint browser: true, jquery: true, bitwise: true, curly: true, eqeqeq: true, forin: true, freeze: true, immed: true, indent: 4, latedef: true, newcap: true, noarg: true, noempty: true, nonbsp: true, nonew: true, quotmark: double, undef: true, unused: true, strict: true, trailing: true */
-/* global render, ko, CryptoJS, LZString */
+/* global render, observable, CryptoJS, LZString */
 
 (function (undefined) {
     "use strict";
@@ -27,9 +27,9 @@
         var self = this;
         var usernameKey = "username";
         var cacheKey = "cache";
-        self.username = ko.observable(localStorageGetItem(usernameKey) || "");
-        self.password = ko.observable("");
-        self.cache = ko.observable(true.toString() === localStorageGetItem(cacheKey));
+        self.username = observable(localStorageGetItem(usernameKey) || "");
+        self.password = observable("");
+        self.cache = observable(true.toString() === localStorageGetItem(cacheKey));
 
         // Handles submit for login
         self.submit = function () {
@@ -55,8 +55,8 @@
     function Status() {
         var self = this;
         var id = 1;
-        self.progress = ko.observable();
-        self.errors = ko.observableArray();
+        self.progress = observable();
+        self.errors = observable([]);
 
         // Shows (or clears) the progress message
         self.showProgress = function (message) {
@@ -65,15 +65,19 @@
 
         // Adds an error message to the list
         self.showError = function (message) {
-            self.errors.unshift({
+            var errors = self.errors();
+            errors.unshift({
                 id: id++,
                 message: message
             });
+            self.errors(errors, true);
         };
 
         // Removes an error message from the list
         self.removeError = function (error) {
-            self.errors.remove(error);
+            var errors = self.errors();
+            errors.splice(errors.indexOf(error), 1);
+            self.errors(errors, true);
         };
     }
     var status = new Status();
@@ -83,9 +87,9 @@
         var self = this;
         self.schema = 1;
         self.timestamp = 0;
-        self.entries = ko.observableArray();
-        self.filter = ko.observable("");
-        self.visibleEntries = ko.observableArray(self.entries());
+        self.entries = observable([]);
+        self.filter = observable("");
+        self.visibleEntries = observable(self.entries());
 
         // Filters the entries according to the search text
         function filterEntries() {
@@ -126,7 +130,9 @@
         self.remove = function (entry) {
             resetInactivityTimeout();
             if (window.confirm("Delete \"" + entry.id + "\"?")) {
-                userData.entries.remove(entry);
+                var entries = userData.entries();
+                entries.splice(entries.indexOf(entry), 1);
+                userData.entries(entries, true);
                 updateTimestampAndSaveToAllStorage();
             }
         };
@@ -178,6 +184,15 @@
             }
         };
 
+        // Returns a serializable representation of the object
+        self.toJSON = function () {
+            return {
+                schema: self.schema,
+                timestamp: self.timestamp,
+                entries: self.entries()
+            };
+        };
+
         // Returns a value indicating whether the contentEditable attribute is needed
         self.contentEditableNeeded = (function () {
             var needed = !!navigator.userAgent.match(/iP(hone|ad|od touch)/i);
@@ -191,19 +206,19 @@
     // Implementation of the entry form
     function EntryForm() {
         var self = this;
-        self.expanded = ko.observable(0);
-        self.id = ko.observable();
-        self.username = ko.observable();
-        self.password = ko.observable();
-        self.website = ko.observable();
-        self.notes = ko.observable();
+        self.expanded = observable(0);
+        self.id = observable();
+        self.username = observable();
+        self.password = observable();
+        self.website = observable();
+        self.notes = observable();
         self.populatedFrom = null;
-        self.generating = ko.observable();
-        self.passwordLength = ko.observable("16");
-        self.passwordLower = ko.observable(true);
-        self.passwordUpper = ko.observable(true);
-        self.passwordNumbers = ko.observable(true);
-        self.passwordSymbols = ko.observable(true);
+        self.generating = observable();
+        self.passwordLength = observable("16");
+        self.passwordLower = observable(true);
+        self.passwordUpper = observable(true);
+        self.passwordNumbers = observable(true);
+        self.passwordSymbols = observable(true);
 
         // Clears the entry form
         self.clear = function () {
@@ -248,19 +263,21 @@
                     notes: $.trim(self.notes()),
                     weak: isWeakPassword(self.password())
                 };
-                var existing = userData.entries().filter(function (e) {
+                var entries = userData.entries();
+                var existing = entries.filter(function (e) {
                     return 0 === entryComparer(e, entry);
                 });
                 if ((0 === existing.length) || window.confirm("Update existing entry \"" + entry.id + "\"?")) {
                     if (self.populatedFrom &&
                         (0 !== entryComparer(entry, self.populatedFrom)) &&
-                        (-1 !== userData.entries().indexOf(self.populatedFrom)) &&
+                        (-1 !== entries.indexOf(self.populatedFrom)) &&
                         window.confirm("Remove previous entry \"" + self.populatedFrom.id + "\"?")) {
-                        userData.entries.remove(self.populatedFrom);
+                        entries.splice(entries.indexOf(self.populatedFrom), 1);
                     }
-                    userData.entries.removeAll(existing);
-                    userData.entries.push(entry);
-                    userData.entries.sort(entryComparer);
+                    var index = entries.indexOf(existing[0]);
+                    entries.splice(index, (index === -1 ? 0 : 1), entry);
+                    entries.sort(entryComparer);
+                    userData.entries(entries, true);
                     updateTimestampAndSaveToAllStorage();
                     self.clear();
                     userData.filter("");
@@ -337,8 +354,8 @@
     var entryForm = new EntryForm();
 
     // Enables the main page UI
-    var loginPageVisible = ko.observable(true);
-    var mainPageVisible = ko.observable(false);
+    var loginPageVisible = observable(true);
+    var mainPageVisible = observable(false);
     function enableMainPage(enable) {
         loginPageVisible(false);
         mainPageVisible(enable);
@@ -568,7 +585,7 @@
 
     // Encrypts and compresses all entries
     function encode(data) {
-        var json = ko.toJSON(data, ["schema", "timestamp", "entries", "id", "username", "password", "website", "notes"]);
+        var json = JSON.stringify(data, ["schema", "timestamp", "entries", "id", "username", "password", "website", "notes"]);
         var base64 = LZString.compressToBase64(json);
         var cipherParams = CryptoJS.AES.encrypt(base64, getEncryptionKey());
         return cipherParams.toString();
@@ -739,6 +756,7 @@
         userData: userData,
         entryForm: entryForm
     });
+
     // setTimeout call works around an Internet Explorer bug where textarea/placeholder's input event fires asynchronously on load (http://dlaa.me/blog/post/inputplaceholder)
     window.setTimeout(clearInactivityTimeout, 10);
 })();

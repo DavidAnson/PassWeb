@@ -1,12 +1,11 @@
 CACHE MANIFEST
-# 2016-02-22
+# 2016-02-26
 aes.js
 default.css
 default.htm
 default.js
 favicon.ico
 jquery-2.1.4.min.js
-knockout-3.4.0.js
 lz-string.min.js
 react.min.js
 react-dom.min.js
