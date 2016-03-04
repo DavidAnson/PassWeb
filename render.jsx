@@ -225,8 +225,14 @@ const EntryForm = React.createClass({
       this.passwordRef.select();
     }
   },
+  enableClickToSubmit: function() {
+    if (this.saveRef && this.submitRef) {
+      this.saveRef.submit = this.submitRef;
+      this.saveRef = this.submitRef = null;
+    }
+  },
   render: function() {
-    var passwordSettings = null;
+    let passwordSettings = null;
     if (this.state.generating) {
       const radioLabels = ["8", "12", "16", "24", "32"].map((len) => {
         const name = "passwordLength";
@@ -280,10 +286,10 @@ const EntryForm = React.createClass({
         </div>
         <div className="buttons">
           <a onClick={this.onGeneratePassword} href="#" className="generate" accessKey="g"><img src="Resources/Lock.svg" alt="Generate password" title="Generate password" className="icon"/></a>
-          <a onClick={this.onClickSubmit} href="#" className="update"><img src="Resources/Save.svg" alt="Save" title="Save" className="icon"/></a>
+          <a onClick={this.onClickSubmit} href="#" className="update"><img src="Resources/Save.svg" alt="Save" title="Save" className="icon" ref={e => { this.saveRef = e; this.enableClickToSubmit(); }}/></a>
           <a onClick={this.onClear} href="#" className="clear"><img src="Resources/Undo.svg" alt="Clear" title="Clear" className="icon"/></a>
         </div>
-        <input type="submit" tabIndex="-1"/>
+        <input type="submit" tabIndex="-1" ref={e => { this.submitRef = e; this.enableClickToSubmit(); }}/>
         {passwordSettings}
       </div>
     ) : (
@@ -360,4 +366,46 @@ function observable(initial) {
     observers.push(cb);
   };
   return obj;
+}
+
+// Simple replacement for jQuery ajax
+function ajax(uri, type, data, done, fail, always) {
+  const noop = () => {};
+  done = done || noop;
+  fail = fail || noop;
+  always = always || noop;
+  const request = new XMLHttpRequest();
+  request.onload = () => {
+    if (request.status >= 200 && request.status < 300) {
+      done(request.responseText);
+    } else {
+      fail();
+    }
+  }
+  request.onerror = () => {
+    fail();
+  };
+  request.onloadend = () => {
+    always();
+  };
+  const encodeFormUrlComponent = (str) => {
+    return encodeURIComponent(str).replace("%20", "+");
+  };
+  let urlencoded = Object.keys(data)
+    .filter((key) => {
+      return (data[key] !== undefined) && (data[key] !== null);
+    })
+    .map((key) => {
+      return encodeFormUrlComponent(key) + "=" + encodeFormUrlComponent(data[key]);
+    })
+    .join("&");
+  if (type.toLowerCase() === "get") {
+    uri += "?" + urlencoded + "&_=" + Date.now();
+    urlencoded = null;
+  }
+  request.open(type, uri);
+  if (urlencoded) {
+    request.setRequestHeader("Content-Type", "application/x-www-form-urlencoded; charset=UTF-8");
+  }
+  request.send(urlencoded);
 }

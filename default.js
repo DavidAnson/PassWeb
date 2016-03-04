@@ -1,5 +1,5 @@
-/* jshint browser: true, jquery: true, bitwise: true, curly: true, eqeqeq: true, forin: true, freeze: true, immed: true, indent: 4, latedef: true, newcap: true, noarg: true, noempty: true, nonbsp: true, nonew: true, quotmark: double, undef: true, unused: true, strict: true, trailing: true */
-/* global render, observable, CryptoJS, LZString */
+/* jshint browser: true, bitwise: true, curly: true, eqeqeq: true, forin: true, freeze: true, immed: true, indent: 4, latedef: true, newcap: true, noarg: true, noempty: true, nonbsp: true, nonew: true, quotmark: double, undef: true, unused: true, strict: true, trailing: true */
+/* global ajax, observable, render, CryptoJS, LZString */
 
 (function (undefined) {
     "use strict";
@@ -139,14 +139,14 @@
 
         // Copies text to the clipboard or unmasks an element and selects its text
         self.copytext = function (text, element) {
-            var $element = $(element);
             // clipboardData API only supported by Internet Explorer
             var copySuccess = window.clipboardData && window.clipboardData.setData("Text", text);
             if (!copySuccess) {
-                $element.text(text);
+                var contentEditable = "contentEditable";
+                element.text = text;
                 if (self.contentEditableNeeded()) {
                     // Required on iOS Safari to show the selection
-                    $element.attr("contentEditable", true);
+                    element.attributes[contentEditable] = true;
                 }
                 var selection = window.getSelection();
                 selection.removeAllRanges();
@@ -165,8 +165,10 @@
                     // Treat SecurityError as failure
                 }
                 var reMaskText = function () {
-                    $element.removeAttr("contentEditable");
-                    $element.text($element.attr("data-mask") || text);
+                    element.attributes[contentEditable] = false;
+                    selection.removeAllRanges();
+                    var dataMask = element.attributes["data-mask"];
+                    element.text = dataMask ? dataMask.value : text;
                 };
                 if (copySuccess) {
                     // Re-mask text immediately
@@ -177,9 +179,10 @@
                 }
             }
             if (copySuccess) {
-                $element.addClass("clipboard copied");
+                var clipboardCopied = " clipboard copied";
+                element.className += clipboardCopied;
                 setTimeout(function removeCopied() {
-                    $element.removeClass("clipboard copied");
+                    element.className = element.className.replace(clipboardCopied, "");
                 }, 0.2 * 1000); // 0.2 second
             }
         };
@@ -235,7 +238,7 @@
 
         // Returns true if valid (i.e., ID and password present)
         self.isValid = function () {
-            return $.trim(self.id()) && self.password();
+            return self.id().trim() && self.password();
         };
 
         // Populates the form by copying fields from an entry
@@ -256,11 +259,11 @@
             if (self.isValid()) {
                 var entry = {
                     timestamp: Date.now(),
-                    id: $.trim(self.id()),
+                    id: self.id().trim(),
                     username: self.username(),
                     password: self.password(),
                     website: self.website(),
-                    notes: $.trim(self.notes()),
+                    notes: self.notes().trim(),
                     weak: isWeakPassword(self.password())
                 };
                 var entries = userData.entries();
@@ -291,7 +294,7 @@
 
         // Simulates a click of submit button so browser will run HTML form validation
         self.clickSubmit = function (entry, event) {
-            $(event.target).closest("form").find("input[type='submit']").trigger("click");
+            event.target.submit.click();
         };
 
         // Expands the entry form
@@ -469,24 +472,26 @@
             var previousCredentialHash = getCredentialHash();
             removeFromLocalStorage();
             PassPhrase = newPassPhrase;
-            updateTimestampAndSaveToAllStorage(previousCredentialHash).then(function () {
-                // Success, clean up remote storage
-                removeFromRemoteStorage(previousCredentialHash);
-            }).fail(function () {
-                // Failure, restore old password locally (already unchanged remotely)
-                removeFromLocalStorage();
-                PassPhrase = previousPassPhrase;
-                saveToLocalStorage();
-                status.showError("Master password update failed; password unchanged!");
+            updateTimestampAndSaveToAllStorage(previousCredentialHash, function (success) {
+                if (success) {
+                    // Success, clean up remote storage
+                    removeFromRemoteStorage(previousCredentialHash);
+                } else {
+                    // Failure, restore old password locally (already unchanged remotely)
+                    removeFromLocalStorage();
+                    PassPhrase = previousPassPhrase;
+                    saveToLocalStorage();
+                    status.showError("Master password update failed; password unchanged!");
+                }
             });
         }
     }
 
     // Update data timestamp and save to local/remote
-    function updateTimestampAndSaveToAllStorage(previousName) {
+    function updateTimestampAndSaveToAllStorage(previousName, callback) {
         userData.timestamp = Date.now();
         saveToLocalStorage();
-        return saveToRemoteStorage(previousName);
+        saveToRemoteStorage(previousName, callback);
     }
 
     // Reads data from local storage
@@ -525,62 +530,76 @@
     // Reads data from remote storage
     function readFromRemoteStorage() {
         status.showProgress("Reading from cloud...");
-        $.ajax(getRemoteStorageUri(), {
-            type: "GET",
-            data: {
+        ajax(
+            getRemoteStorageUri(),
+            "GET",
+            {
                 name: getCredentialHash()
             },
-            dataType: "text",
-            cache: false
-        }).done(function (data) {
-            var result = mergeImportedData(data, false);
-            if (result) {
-                status.showError(result);
+            function (responseText) {
+                var result = mergeImportedData(responseText, false);
+                if (result) {
+                    status.showError(result);
+                }
+            },
+            function () {
+                var implication = userData.entries().length ? "using local data" : "no local data available";
+                var reason = navigatorOnLine() ? "Network problem or bad user name/password?" : "Network appears offline.";
+                var message = "Error reading from cloud; " + implication + ". (" + reason + ")";
+                status.showError(message);
+                logNetworkFailure(message);
+            },
+            function () {
+                status.showProgress(null);
             }
-        }).fail(function (result) {
-            var implication = userData.entries().length ? "using local data" : "no local data available";
-            var reason = navigatorOnLine() ? "Network problem or bad user name/password?" : "Network appears offline.";
-            var message = "Error reading from cloud; " + implication + ". (" + reason + ")";
-            status.showError(message);
-            logNetworkFailure(message, result);
-        }).always(function () {
-            status.showProgress(null);
-        });
+        );
     }
 
     // Saves data to remote storage
-    function saveToRemoteStorage(previousName) {
+    function saveToRemoteStorage(previousName, callback) {
         status.showProgress("Saving to cloud...");
-        return $.ajax(getRemoteStorageUri(), {
-            type: "POST",
-            data: {
+        var success = true;
+        ajax(
+            getRemoteStorageUri(),
+            "POST",
+            {
                 method: "PUT",
                 name: getCredentialHash(),
                 previousName: previousName,
                 content: encode(userData)
+            },
+            null,
+            function () {
+                var implication = CacheLocally ? "Data was saved locally; cloud will be updated when possible." : "Not caching, so data may be lost when browser is closed!";
+                var reason = navigatorOnLine() ? "" : " (Network appears offline.)";
+                var message = "Error saving to cloud. " + implication + reason;
+                status.showError(message);
+                logNetworkFailure(message);
+                success = false;
+            },
+            function () {
+                status.showProgress(null);
+                if (callback) {
+                    callback(success);
+                }
             }
-        }).fail(function (result) {
-            var implication = CacheLocally ? "Data was saved locally; cloud will be updated when possible." : "Not caching, so data may be lost when browser is closed!";
-            var reason = navigatorOnLine() ? "" : " (Network appears offline.)";
-            var message = "Error saving to cloud. " + implication + reason;
-            status.showError(message);
-            logNetworkFailure(message, result);
-        }).always(function () {
-            status.showProgress(null);
-        });
+        );
     }
 
     // Removes data from remote storage
     function removeFromRemoteStorage(credentialHash) {
-        $.ajax(getRemoteStorageUri(), {
-            type: "POST",
-            data: {
+        ajax(
+            getRemoteStorageUri(),
+            "POST",
+            {
                 method: "DELETE",
                 name: credentialHash
+            },
+            null,
+            function () {
+                logNetworkFailure("[Error deleting from cloud.]");
             }
-        }).fail(function (result) {
-            logNetworkFailure("[Error deleting from cloud.]", result);
-        });
+        );
     }
 
     // Encrypts and compresses all entries
@@ -596,7 +615,7 @@
         var cipherParams = CryptoJS.AES.decrypt(data, getEncryptionKey());
         var base64 = cipherParams.toString(CryptoJS.enc.Utf8);
         var json = base64 ? LZString.decompressFromBase64(base64) : "";
-        return $.parseJSON(json);
+        return JSON.parse(json);
     }
 
     // Compares entry IDs locale-aware
@@ -666,9 +685,8 @@
     }
 
     // Logs a network failure message to the console
-    function logNetworkFailure(message /*, result*/) {
+    function logNetworkFailure(message) {
         consoleLog(message);
-        //consoleLog(result.status + ": " + result.statusText + "\n" + result.responseText);
         consoleLog("File name: " + getCredentialHash());
     }
 
