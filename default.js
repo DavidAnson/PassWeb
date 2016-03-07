@@ -94,10 +94,14 @@
         // Filters the entries according to the search text
         function filterEntries() {
             var filterUpper = self.filter().toLocaleUpperCase();
-            self.visibleEntries(self.entries().filter(function (entry) {
-                return (0 === filterUpper.length) ||
-                       (-1 !== entry.id.toLocaleUpperCase().indexOf(filterUpper)) ||
-                       (-1 !== (entry.username || "").toLocaleUpperCase().indexOf(filterUpper));
+            self.visibleEntries(self.entries().map(function (entry) {
+                var visible = ((0 === filterUpper.length) ||
+                               (-1 !== entry.id.toLocaleUpperCase().indexOf(filterUpper)) ||
+                               (-1 !== (entry.username || "").toLocaleUpperCase().indexOf(filterUpper)));
+                return {
+                    entry: entry,
+                    visible: visible
+                };
             }));
         }
         self.entries.subscribe(filterEntries);
@@ -696,6 +700,20 @@
             window.console.log(message);
         }
     }
+
+    // Creates many entries for testing
+    // (function createTestEntries(count) {
+    //     var entries = [];
+    //     for (var i = 0; i < count; i++) {
+    //         var s = i.toString();
+    //         entries.push({
+    //             id: s,
+    //             username:s,
+    //             password:s
+    //         });
+    //     }
+    //     userData.entries(entries);
+    // })(10000);
 
     // Outputs all entries to the console
     //function debugLogEntries() {

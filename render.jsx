@@ -137,15 +137,32 @@ const EntriesList = React.createClass({
   },
   render: function() {
     const userData = this.props.userData;
-    const visibleEntries = userData.visibleEntries().map(function(entry) {
+    const visibleEntries = userData.visibleEntries().map(function(visibleEntry) {
+      const entry = visibleEntry.entry;
+      const visible = visibleEntry.visible;
       return (
-        <EntryItem key={entry.id} entry={entry} userData={userData}/>
+        <EntryWrapper key={entry.id} entry={entry} userData={userData} visible={visible}/>
       );
     });
     return (
       <ul id="entriesList">
         {visibleEntries}
       </ul>
+    );
+  }
+});
+
+const EntryWrapper = React.createClass({
+  shouldComponentUpdate: function(nextProps, nextState) {
+    return (this.props.entry !== nextProps.entry) || (this.props.visible !== nextProps.visible);
+  },
+  render: function() {
+    const entry = this.props.entry;
+    const userData = this.props.userData;
+    return (
+      <li style={{ display: this.props.visible ? null : "none"}}>
+        <EntryItem entry={entry} userData={userData}/>
+      </li>
     );
   }
 });
@@ -165,6 +182,9 @@ const EntryItem = React.createClass({
     this.props.userData.togglenotes(this.props.entry);
     this.setState({ drawerOpen: !this.state.drawerOpen });
   },
+  shouldComponentUpdate: function(nextProps, nextState) {
+    return (this.props.entry !== nextProps.entry) || (this.state.drawerOpen !== nextState.drawerOpen);
+  },
   render: function() {
     const dataMask = "********";
     const entry = this.props.entry;
@@ -180,21 +200,19 @@ const EntryItem = React.createClass({
       </div>
     ) : null;
     return (
-      <li>
-        <div className="block">
-          <div className="banner">
-            <div title={entry.id} className="title ellipsis">{entry.website ? <a href={entry.website} target="_blank">{entry.id}</a> : entry.id}</div>
-            <a onClick={this.onClickEdit} href="#" className="edit"><img src="Resources/Edit.svg" alt="Edit" title="Edit" className="icon"/></a>
-            <a onClick={this.onClickRemove} href="#" className="remove"><img src="Resources/Close.svg" alt="Delete" title="Delete" className="icon"/></a>
-          </div>
-          <div className="userpass">
-            <div>&nbsp;</div>
-            <div className="username"><a onClick={this.onClickCopyusername} href="#" className="ellipsis">{entry.username}</a></div>
-            <div className={"password" + (entry.weak ? " weak" : "")} title={entry.weak}><a onClick={this.onClickCopypassword} data-mask={dataMask} href="#" className="ellipsis">{dataMask}</a></div>
-          </div>
-          {notes}
+      <div className="block">
+        <div className="banner">
+          <div title={entry.id} className="title ellipsis">{entry.website ? <a href={entry.website} target="_blank">{entry.id}</a> : entry.id}</div>
+          <a onClick={this.onClickEdit} href="#" className="edit"><img src="Resources/Edit.svg" alt="Edit" title="Edit" className="icon"/></a>
+          <a onClick={this.onClickRemove} href="#" className="remove"><img src="Resources/Close.svg" alt="Delete" title="Delete" className="icon"/></a>
         </div>
-      </li>
+        <div className="userpass">
+          <div>&nbsp;</div>
+          <div className="username"><a onClick={this.onClickCopyusername} href="#" className="ellipsis">{entry.username}</a></div>
+          <div className={"password" + (entry.weak ? " weak" : "")} title={entry.weak}><a onClick={this.onClickCopypassword} data-mask={dataMask} href="#" className="ellipsis">{dataMask}</a></div>
+        </div>
+        {notes}
+      </div>
     );
   }
 });
