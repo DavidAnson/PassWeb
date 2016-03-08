@@ -298,7 +298,7 @@
 
         // Simulates a click of submit button so browser will run HTML form validation
         self.clickSubmit = function (entry, event) {
-            event.target.submit.click();
+            (event.target.submit || event.target.parentNode.submit).click();
         };
 
         // Expands the entry form
@@ -771,10 +771,10 @@
         },
         {
             question: "How was PassWeb developed?",
-            answer: "The client is built with HTML, CSS, and JavaScript and uses the jQuery, Knockout, crypto-js, and lz-string libraries. " +
-                "The server's REST API runs on ASP.NET or Node.js. " +
-                "Encryption is 256-bit AES in CBC mode. " +
-                "Hashing is SHA-512."
+            answer: "The client is built using HTML, CSS, and JavaScript on top of the React, crypto-js, and lz-string libraries. " +
+                "The server's REST API runs on either ASP.NET or Node.js. " +
+                "Encryption uses 256-bit AES in CBC mode. " +
+                "Hashing uses SHA-512."
         },
     ];
 

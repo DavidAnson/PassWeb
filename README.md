@@ -55,7 +55,7 @@ Sorry, your data is irretrievably lost! PassWeb's encryption algorithm is govern
 Because it's simple and standards-based, PassWeb works cross-platform on modern browsers like recent releases of Internet Explorer, Chrome, Firefox, and Safari. If you see a problem, please email me detailed steps to reproduce it.
 
 **How was PassWeb developed?**
-The client is built with HTML, CSS, and JavaScript and uses the [jQuery](http://jquery.com/), [Knockout](http://knockoutjs.com/), [crypto-js](http://code.google.com/p/crypto-js/), and [lz-string](http://pieroxy.net/blog/pages/lz-string/index.html) libraries. The server's REST API runs on ASP.NET or Node.js. Encryption is 256-bit AES in CBC mode. Hashing is SHA-512.
+The client is built using HTML, CSS, and JavaScript on top of the [React](https://facebook.github.io/react/), [crypto-js](https://code.google.com/archive/p/crypto-js/), and [lz-string](http://pieroxy.net/blog/pages/lz-string/index.html) libraries. The server's REST API runs on either ASP.NET or Node.js. Encryption uses 256-bit AES in CBC mode. Hashing uses SHA-512.
 
 
 ## Configuration
@@ -117,7 +117,7 @@ File | Purpose
 -----|--------
 default.htm <br/> default.js <br/> default.css | PassWeb implementation
 offline.appcache | Offline cache manifest
-jquery-2.1.4.min.js <br/> knockout-3.4.0.js <br/> lz-string.min.js <br/> aes.js <br/> sha512.js <br/> | External libraries
+react.min.js <br/> react-dom.min.js <br/> lz-string.min.js <br/> aes.js <br/> sha512.js <br/> | External libraries
 favicon.ico <br/> Resources\\\*.png <br/> Resources\\\*.svg <br/> | Image resources
 App_Code\RemoteStorage.cs <br/> Web.config <br/> *App_Data\\PassWeb\\...* | ASP.NET server
 NodeJs\\server.js <br/> NodeJs\\package.json <br/> *NodeJs\\App_Data\\...* | Node.js server

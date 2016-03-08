@@ -59,8 +59,9 @@ const App = React.createClass({
         </div>
       </div>
     ) : null;
+    const resetInactivityTimeout = context.app.resetInactivityTimeout;
     return (
-      <div onInputCapture={context.app.resetInactivityTimeout}>
+      <div onChangeCapture={resetInactivityTimeout} onClickCapture={resetInactivityTimeout}>
         <h1>PassWeb</h1>
         {loginPage}
         {mainPage}
@@ -239,14 +240,14 @@ const EntryForm = React.createClass({
       this.formRef.scrollIntoView();
       this.titleRef.focus();
     }
-    if (prevState.generating !== this.state.generating) {
+    if ((prevState.generating !== this.state.generating) && this.state.generating) {
       this.passwordRef.select();
     }
   },
   enableClickToSubmit: function() {
-    if (this.saveRef && this.submitRef) {
-      this.saveRef.submit = this.submitRef;
-      this.saveRef = this.submitRef = null;
+    if (this.updateRef && this.submitRef) {
+      this.updateRef.submit = this.submitRef;
+      this.updateRef = this.submitRef = null;
     }
   },
   render: function() {
@@ -304,7 +305,7 @@ const EntryForm = React.createClass({
         </div>
         <div className="buttons">
           <a onClick={this.onGeneratePassword} href="#" className="generate" accessKey="g"><img src="Resources/Lock.svg" alt="Generate password" title="Generate password" className="icon"/></a>
-          <a onClick={this.onClickSubmit} href="#" className="update"><img src="Resources/Save.svg" alt="Save" title="Save" className="icon" ref={e => { this.saveRef = e; this.enableClickToSubmit(); }}/></a>
+          <a onClick={this.onClickSubmit} href="#" className="update" ref={e => { this.updateRef = e; this.enableClickToSubmit(); }}><img src="Resources/Save.svg" alt="Save" title="Save" className="icon"/></a>
           <a onClick={this.onClear} href="#" className="clear"><img src="Resources/Undo.svg" alt="Clear" title="Clear" className="icon"/></a>
         </div>
         <input type="submit" tabIndex="-1" ref={e => { this.submitRef = e; this.enableClickToSubmit(); }}/>
