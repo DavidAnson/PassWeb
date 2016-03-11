@@ -146,11 +146,11 @@
             // clipboardData API only supported by Internet Explorer
             var copySuccess = window.clipboardData && window.clipboardData.setData("Text", text);
             if (!copySuccess) {
-                var contentEditable = "contentEditable";
+                var contenteditable = "contenteditable";
                 element.text = text;
-                if (self.contentEditableNeeded()) {
+                if (self.contenteditableNeeded()) {
                     // Required on iOS Safari to show the selection
-                    element.attributes[contentEditable] = true;
+                    element.setAttribute(contenteditable, true);
                 }
                 var selection = window.getSelection();
                 selection.removeAllRanges();
@@ -169,10 +169,10 @@
                     // Treat SecurityError as failure
                 }
                 var reMaskText = function () {
-                    element.attributes[contentEditable] = false;
+                    element.removeAttribute(contenteditable);
                     selection.removeAllRanges();
-                    var dataMask = element.attributes["data-mask"];
-                    element.text = dataMask ? dataMask.value : text;
+                    var dataMask = element.getAttribute("data-mask");
+                    element.text = dataMask || text;
                 };
                 if (copySuccess) {
                     // Re-mask text immediately
@@ -200,8 +200,8 @@
             };
         };
 
-        // Returns a value indicating whether the contentEditable attribute is needed
-        self.contentEditableNeeded = (function () {
+        // Returns a value indicating whether the contenteditable attribute is needed
+        self.contenteditableNeeded = (function () {
             var needed = !!navigator.userAgent.match(/iP(hone|ad|od touch)/i);
             return function () {
                 return needed;

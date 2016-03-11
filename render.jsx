@@ -91,7 +91,7 @@ const LoginForm = React.createClass({
         </div>
         <div>
           <label>
-            <input type="checkbox" value={this.state.cache} onChange={this.onChangeCache} autoComplete="off"/>
+            <input type="checkbox" checked={this.state.cache} onChange={this.onChangeCache} autoComplete="off"/>
             <span>Cache encrypted passwords for offline use</span>
           </label>
         </div>
@@ -423,6 +423,7 @@ function ajax(uri, type, data, done, fail, always) {
     urlencoded = null;
   }
   request.open(type, uri);
+  request.setRequestHeader("X-Requested-With", "XMLHttpRequest");
   if (urlencoded) {
     request.setRequestHeader("Content-Type", "application/x-www-form-urlencoded; charset=UTF-8");
   }
