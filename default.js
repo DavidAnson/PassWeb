@@ -1,11 +1,5 @@
-/// <reference path="aes.js"/>
-/// <reference path="sha512.js"/>
-/// <reference path="jquery-2.1.4.js"/>
-/// <reference path="knockout-3.4.0.debug.js"/>
-/// <reference path="lz-string.js"/>
-
-/* jshint browser: true, jquery: true, bitwise: true, curly: true, eqeqeq: true, forin: true, freeze: true, immed: true, indent: 4, latedef: true, newcap: true, noarg: true, noempty: true, nonbsp: true, nonew: true, quotmark: double, undef: true, unused: true, strict: true, trailing: true */
-/* global ko, CryptoJS, LZString */
+/* jshint browser: true, bitwise: true, curly: true, eqeqeq: true, forin: true, freeze: true, immed: true, indent: 4, latedef: true, newcap: true, noarg: true, noempty: true, nonbsp: true, nonew: true, quotmark: double, undef: true, unused: true, strict: true, trailing: true */
+/* global ajax, observable, render, CryptoJS, LZString */
 
 (function (undefined) {
     "use strict";
@@ -33,28 +27,26 @@
         var self = this;
         var usernameKey = "username";
         var cacheKey = "cache";
-        self.username = ko.observable(localStorageGetItem(usernameKey));
-        self.password = ko.observable();
-        self.cache = ko.observable(true.toString() === localStorageGetItem(cacheKey));
+        self.username = observable(localStorageGetItem(usernameKey) || "");
+        self.password = observable("");
+        self.cache = observable(true.toString() === localStorageGetItem(cacheKey));
 
         // Handles submit for login
         self.submit = function () {
             resetInactivityTimeout();
-            var usernameValue = self.username() || "";
+            var usernameValue = self.username();
             localStorageSetItem(usernameKey, usernameValue);
             UserNameUpper = usernameValue.toLocaleUpperCase();
-            PassPhrase = self.password() || "";
-            CacheLocally = !!self.cache();
+            PassPhrase = self.password();
+            CacheLocally = self.cache();
             localStorageSetItem(cacheKey, CacheLocally.toString());
             if (!CacheLocally) {
                 // Delete any previously saved data
                 removeFromLocalStorage();
             }
-            $("#loginPage").hide();
             enableMainPage(true);
             readFromLocalStorage();
             readFromRemoteStorage();
-            return false;
         };
     }
     var loginForm = new LoginForm();
@@ -63,8 +55,8 @@
     function Status() {
         var self = this;
         var id = 1;
-        self.progress = ko.observable();
-        self.errors = ko.observableArray();
+        self.progress = observable();
+        self.errors = observable([]);
 
         // Shows (or clears) the progress message
         self.showProgress = function (message) {
@@ -73,15 +65,19 @@
 
         // Adds an error message to the list
         self.showError = function (message) {
-            self.errors.unshift({
+            var errors = self.errors();
+            errors.unshift({
                 id: id++,
                 message: message
             });
+            self.errors(errors, true);
         };
 
         // Removes an error message from the list
         self.removeError = function (error) {
-            self.errors.remove(error);
+            var errors = self.errors();
+            errors.splice(errors.indexOf(error), 1);
+            self.errors(errors, true);
         };
     }
     var status = new Status();
@@ -91,18 +87,22 @@
         var self = this;
         self.schema = 1;
         self.timestamp = 0;
-        self.entries = ko.observableArray();
-        self.filter = ko.observable("");
+        self.entries = observable([]);
+        self.filter = observable("");
+        self.visibleEntries = observable(self.entries());
 
         // Filters the entries according to the search text
         function filterEntries() {
             var filterUpper = self.filter().toLocaleUpperCase();
-            self.entries().forEach(function (entry) {
-                var visible = (0 === filterUpper.length) ||
-                               ((-1 !== entry.id.toLocaleUpperCase().indexOf(filterUpper)) ||
-                                (-1 !== (entry.username || "").toLocaleUpperCase().indexOf(filterUpper)));
-                entry.visible(visible);
-            });
+            self.visibleEntries(self.entries().map(function (entry) {
+                var visible = ((0 === filterUpper.length) ||
+                               (-1 !== entry.id.toLocaleUpperCase().indexOf(filterUpper)) ||
+                               (-1 !== (entry.username || "").toLocaleUpperCase().indexOf(filterUpper)));
+                return {
+                    entry: entry,
+                    visible: visible
+                };
+            }));
         }
         self.entries.subscribe(filterEntries);
         self.filter.subscribe(filterEntries);
@@ -120,14 +120,8 @@
         };
 
         // Toggles the display of the notes field for an entry
-        self.togglenotes = function (entry, event) {
+        self.togglenotes = function () {
             resetInactivityTimeout();
-            var content = $(event.target).closest(".notes").find(".content").first();
-            if (content.is(":visible")) {
-                content.hide();
-            } else {
-                content.show();
-            }
         };
 
         // Populates the entry field with an entry's data
@@ -140,21 +134,23 @@
         self.remove = function (entry) {
             resetInactivityTimeout();
             if (window.confirm("Delete \"" + entry.id + "\"?")) {
-                userData.entries.remove(entry);
+                var entries = userData.entries();
+                entries.splice(entries.indexOf(entry), 1);
+                userData.entries(entries, true);
                 updateTimestampAndSaveToAllStorage();
             }
         };
 
         // Copies text to the clipboard or unmasks an element and selects its text
         self.copytext = function (text, element) {
-            var $element = $(element);
             // clipboardData API only supported by Internet Explorer
             var copySuccess = window.clipboardData && window.clipboardData.setData("Text", text);
             if (!copySuccess) {
-                $element.text(text);
-                if (self.contentEditableNeeded()) {
+                var contenteditable = "contenteditable";
+                element.text = text;
+                if (self.contenteditableNeeded()) {
                     // Required on iOS Safari to show the selection
-                    $element.attr("contentEditable", true);
+                    element.setAttribute(contenteditable, true);
                 }
                 var selection = window.getSelection();
                 selection.removeAllRanges();
@@ -173,8 +169,10 @@
                     // Treat SecurityError as failure
                 }
                 var reMaskText = function () {
-                    $element.removeAttr("contentEditable");
-                    $element.text($element.attr("data-mask") || text);
+                    element.removeAttribute(contenteditable);
+                    selection.removeAllRanges();
+                    var dataMask = element.getAttribute("data-mask");
+                    element.text = dataMask || text;
                 };
                 if (copySuccess) {
                     // Re-mask text immediately
@@ -185,15 +183,25 @@
                 }
             }
             if (copySuccess) {
-                $element.addClass("clipboard copied");
+                var clipboardCopied = " clipboard copied";
+                element.className += clipboardCopied;
                 setTimeout(function removeCopied() {
-                    $element.removeClass("clipboard copied");
+                    element.className = element.className.replace(clipboardCopied, "");
                 }, 0.2 * 1000); // 0.2 second
             }
         };
 
-        // Returns a value indicating whether the contentEditable attribute is needed
-        self.contentEditableNeeded = (function () {
+        // Returns a serializable representation of the object
+        self.toJSON = function () {
+            return {
+                schema: self.schema,
+                timestamp: self.timestamp,
+                entries: self.entries()
+            };
+        };
+
+        // Returns a value indicating whether the contenteditable attribute is needed
+        self.contenteditableNeeded = (function () {
             var needed = !!navigator.userAgent.match(/iP(hone|ad|od touch)/i);
             return function () {
                 return needed;
@@ -205,29 +213,24 @@
     // Implementation of the entry form
     function EntryForm() {
         var self = this;
-        self.expanded = ko.observable(false);
-        self.id = ko.observable();
-        self.username = ko.observable();
-        self.password = ko.observable();
-        self.website = ko.observable();
-        self.notes = ko.observable();
+        self.expanded = observable(0);
+        self.id = observable();
+        self.username = observable();
+        self.password = observable();
+        self.website = observable();
+        self.notes = observable();
         self.populatedFrom = null;
-        self.generating = ko.observable(false);
-        self.passwordLength = ko.observable("16");
-        self.passwordLower = ko.observable(true);
-        self.passwordUpper = ko.observable(true);
-        self.passwordNumbers = ko.observable(true);
-        self.passwordSymbols = ko.observable(true);
-        self.linkAccessKey = ko.observable("n");
-        self.inputAccessKey = ko.observable(null);
-        self.passwordInput = ko.computed(function () {
-            return self.generating() ? "text" : "password";
-        });
+        self.generating = observable();
+        self.passwordLength = observable("16");
+        self.passwordLower = observable(true);
+        self.passwordUpper = observable(true);
+        self.passwordNumbers = observable(true);
+        self.passwordSymbols = observable(true);
 
         // Clears the entry form
         self.clear = function () {
             resetInactivityTimeout();
-            self.generating(false);
+            self.generating(0);
             self.id("");
             self.username("");
             self.password("");
@@ -239,7 +242,7 @@
 
         // Returns true if valid (i.e., ID and password present)
         self.isValid = function () {
-            return $.trim(self.id()) && self.password();
+            return self.id().trim() && self.password();
         };
 
         // Populates the form by copying fields from an entry
@@ -260,27 +263,28 @@
             if (self.isValid()) {
                 var entry = {
                     timestamp: Date.now(),
-                    id: $.trim(self.id()),
+                    id: self.id().trim(),
                     username: self.username(),
                     password: self.password(),
                     website: self.website(),
-                    notes: $.trim(self.notes()),
-                    weak: ko.observable(isWeakPassword(self.password())),
-                    visible: ko.observable(true)
+                    notes: self.notes().trim(),
+                    weak: isWeakPassword(self.password())
                 };
-                var existing = userData.entries().filter(function (e) {
+                var entries = userData.entries();
+                var existing = entries.filter(function (e) {
                     return 0 === entryComparer(e, entry);
                 });
                 if ((0 === existing.length) || window.confirm("Update existing entry \"" + entry.id + "\"?")) {
                     if (self.populatedFrom &&
                         (0 !== entryComparer(entry, self.populatedFrom)) &&
-                        (-1 !== userData.entries().indexOf(self.populatedFrom)) &&
+                        (-1 !== entries.indexOf(self.populatedFrom)) &&
                         window.confirm("Remove previous entry \"" + self.populatedFrom.id + "\"?")) {
-                        userData.entries.remove(self.populatedFrom);
+                        entries.splice(entries.indexOf(self.populatedFrom), 1);
                     }
-                    userData.entries.removeAll(existing);
-                    userData.entries.push(entry);
-                    userData.entries.sort(entryComparer);
+                    var index = entries.indexOf(existing[0]);
+                    entries.splice(index, (index === -1 ? 0 : 1), entry);
+                    entries.sort(entryComparer);
+                    userData.entries(entries, true);
                     updateTimestampAndSaveToAllStorage();
                     self.clear();
                     userData.filter("");
@@ -290,23 +294,17 @@
                 // Validation for browsers that don't support HTML validation
                 window.alert("Incomplete or invalid entry.");
             }
-            return false;
         };
 
         // Simulates a click of submit button so browser will run HTML form validation
         self.clickSubmit = function (entry, event) {
-            $(event.target).closest("form").find("input[type='submit']").trigger("click");
+            (event.target.submit || event.target.parentNode.submit).click();
         };
 
         // Expands the entry form
         self.expand = function () {
             resetInactivityTimeout();
-            self.linkAccessKey(null);
-            self.inputAccessKey("n");
-            self.expanded(true);
-            var entryFormElement = $("#entryForm");
-            entryFormElement[0].scrollIntoView();
-            entryFormElement.find("input")[0].focus();
+            self.expanded(self.expanded() + 1);
         };
 
         // Generates a random/secure password
@@ -334,9 +332,8 @@
                     }
                 }
                 self.password(password);
-                $("#password").select();
             }
-            self.generating(true);
+            self.generating(self.generating() + 1);
         };
 
         // Subscriptions to re-generate when password settings change
@@ -364,13 +361,11 @@
     var entryForm = new EntryForm();
 
     // Enables the main page UI
+    var loginPageVisible = observable(true);
+    var mainPageVisible = observable(false);
     function enableMainPage(enable) {
-        var mainPage = $("#mainPage");
-        if (enable) {
-            mainPage.show();
-        } else {
-            mainPage.hide();
-        }
+        loginPageVisible(false);
+        mainPageVisible(enable);
     }
 
     // Merges imported data with what has already been loaded
@@ -395,8 +390,7 @@
                            e.hasOwnProperty("notes");
                 }).sort(entryComparer);
                 data.entries.forEach(function (e) {
-                    e.weak = ko.observable(isWeakPassword(e.password));
-                    e.visible = ko.observable(true);
+                    e.weak = isWeakPassword(e.password);
                 });
                 if (0 === userData.timestamp) {
                     // No data has been loaded yet; use imported data as-is
@@ -474,11 +468,34 @@
         return null;
     }
 
+    function changeMasterPassword() {
+        // Prompt to change master password
+        var newPassPhrase = window.prompt("New master password:", "");
+        if (newPassPhrase || ("" === newPassPhrase)) {
+            var previousPassPhrase = PassPhrase;
+            var previousCredentialHash = getCredentialHash();
+            removeFromLocalStorage();
+            PassPhrase = newPassPhrase;
+            updateTimestampAndSaveToAllStorage(previousCredentialHash, function (success) {
+                if (success) {
+                    // Success, clean up remote storage
+                    removeFromRemoteStorage(previousCredentialHash);
+                } else {
+                    // Failure, restore old password locally (already unchanged remotely)
+                    removeFromLocalStorage();
+                    PassPhrase = previousPassPhrase;
+                    saveToLocalStorage();
+                    status.showError("Master password update failed; password unchanged!");
+                }
+            });
+        }
+    }
+
     // Update data timestamp and save to local/remote
-    function updateTimestampAndSaveToAllStorage(previousName) {
+    function updateTimestampAndSaveToAllStorage(previousName, callback) {
         userData.timestamp = Date.now();
         saveToLocalStorage();
-        return saveToRemoteStorage(previousName);
+        saveToRemoteStorage(previousName, callback);
     }
 
     // Reads data from local storage
@@ -517,67 +534,81 @@
     // Reads data from remote storage
     function readFromRemoteStorage() {
         status.showProgress("Reading from cloud...");
-        $.ajax(getRemoteStorageUri(), {
-            type: "GET",
-            data: {
+        ajax(
+            getRemoteStorageUri(),
+            "GET",
+            {
                 name: getCredentialHash()
             },
-            dataType: "text",
-            cache: false
-        }).done(function (data) {
-            var result = mergeImportedData(data, false);
-            if (result) {
-                status.showError(result);
+            function (responseText) {
+                var result = mergeImportedData(responseText, false);
+                if (result) {
+                    status.showError(result);
+                }
+            },
+            function () {
+                var implication = userData.entries().length ? "using local data" : "no local data available";
+                var reason = navigatorOnLine() ? "Network problem or bad user name/password?" : "Network appears offline.";
+                var message = "Error reading from cloud; " + implication + ". (" + reason + ")";
+                status.showError(message);
+                logNetworkFailure(message);
+            },
+            function () {
+                status.showProgress(null);
             }
-        }).fail(function (result) {
-            var implication = userData.entries().length ? "using local data" : "no local data available";
-            var reason = navigatorOnLine() ? "Network problem or bad user name/password?" : "Network appears offline.";
-            var message = "Error reading from cloud; " + implication + ". (" + reason + ")";
-            status.showError(message);
-            logNetworkFailure(message, result);
-        }).always(function () {
-            status.showProgress(null);
-        });
+        );
     }
 
     // Saves data to remote storage
-    function saveToRemoteStorage(previousName) {
+    function saveToRemoteStorage(previousName, callback) {
         status.showProgress("Saving to cloud...");
-        return $.ajax(getRemoteStorageUri(), {
-            type: "POST",
-            data: {
+        var success = true;
+        ajax(
+            getRemoteStorageUri(),
+            "POST",
+            {
                 method: "PUT",
                 name: getCredentialHash(),
                 previousName: previousName,
                 content: encode(userData)
+            },
+            null,
+            function () {
+                var implication = CacheLocally ? "Data was saved locally; cloud will be updated when possible." : "Not caching, so data may be lost when browser is closed!";
+                var reason = navigatorOnLine() ? "" : " (Network appears offline.)";
+                var message = "Error saving to cloud. " + implication + reason;
+                status.showError(message);
+                logNetworkFailure(message);
+                success = false;
+            },
+            function () {
+                status.showProgress(null);
+                if (callback) {
+                    callback(success);
+                }
             }
-        }).fail(function (result) {
-            var implication = CacheLocally ? "Data was saved locally; cloud will be updated when possible." : "Not caching, so data may be lost when browser is closed!";
-            var reason = navigatorOnLine() ? "" : " (Network appears offline.)";
-            var message = "Error saving to cloud. " + implication + reason;
-            status.showError(message);
-            logNetworkFailure(message, result);
-        }).always(function () {
-            status.showProgress(null);
-        });
+        );
     }
 
     // Removes data from remote storage
     function removeFromRemoteStorage(credentialHash) {
-        $.ajax(getRemoteStorageUri(), {
-            type: "POST",
-            data: {
+        ajax(
+            getRemoteStorageUri(),
+            "POST",
+            {
                 method: "DELETE",
                 name: credentialHash
+            },
+            null,
+            function () {
+                logNetworkFailure("[Error deleting from cloud.]");
             }
-        }).fail(function (result) {
-            logNetworkFailure("[Error deleting from cloud.]", result);
-        });
+        );
     }
 
     // Encrypts and compresses all entries
     function encode(data) {
-        var json = ko.toJSON(data, ["schema", "timestamp", "entries", "id", "username", "password", "website", "notes"]);
+        var json = JSON.stringify(data, ["schema", "timestamp", "entries", "id", "username", "password", "website", "notes"]);
         var base64 = LZString.compressToBase64(json);
         var cipherParams = CryptoJS.AES.encrypt(base64, getEncryptionKey());
         return cipherParams.toString();
@@ -588,7 +619,7 @@
         var cipherParams = CryptoJS.AES.decrypt(data, getEncryptionKey());
         var base64 = cipherParams.toString(CryptoJS.enc.Utf8);
         var json = base64 ? LZString.decompressFromBase64(base64) : "";
-        return $.parseJSON(json);
+        return JSON.parse(json);
     }
 
     // Compares entry IDs locale-aware
@@ -618,7 +649,7 @@
         if (problem) {
             return "[Weak: " + problem + "]";
         } else {
-            return false;
+            return "";
         }
     }
 
@@ -658,9 +689,8 @@
     }
 
     // Logs a network failure message to the console
-    function logNetworkFailure(message /*, result*/) {
+    function logNetworkFailure(message) {
         consoleLog(message);
-        //consoleLog(result.status + ": " + result.statusText + "\n" + result.responseText);
         consoleLog("File name: " + getCredentialHash());
     }
 
@@ -670,6 +700,20 @@
             window.console.log(message);
         }
     }
+
+    // Creates many entries for testing
+    // (function createTestEntries(count) {
+    //     var entries = [];
+    //     for (var i = 0; i < count; i++) {
+    //         var s = i.toString();
+    //         entries.push({
+    //             id: s,
+    //             username:s,
+    //             password:s
+    //         });
+    //     }
+    //     userData.entries(entries);
+    // })(10000);
 
     // Outputs all entries to the console
     //function debugLogEntries() {
@@ -727,47 +771,28 @@
         },
         {
             question: "How was PassWeb developed?",
-            answer: "The client is built with HTML, CSS, and JavaScript and uses the jQuery, Knockout, crypto-js, and lz-string libraries. " +
-                "The server's REST API runs on ASP.NET or Node.js. " +
-                "Encryption is 256-bit AES in CBC mode. " +
-                "Hashing is SHA-512."
+            answer: "The client is built using HTML, CSS, and JavaScript on top of the React, crypto-js, and lz-string libraries. " +
+                "The server's REST API runs on either ASP.NET or Node.js. " +
+                "Encryption uses 256-bit AES in CBC mode. " +
+                "Hashing uses SHA-512."
         },
     ];
 
-    $(function () {
-        // Initialize
-        ko.applyBindings(loginForm, $("#loginForm")[0]);
-        ko.applyBindings(faqs, $("#faqs")[0]);
-        ko.applyBindings(status, $("#status")[0]);
-        ko.applyBindings(userData, $("#entriesList")[0]);
-        ko.applyBindings(userData, $("#filter")[0]);
-        ko.applyBindings(entryForm, $("#entryForm")[0]);
-        $("#mainPage input").add("#mainPage textarea").on("input", resetInactivityTimeout);
-        $(window).on("scroll", resetInactivityTimeout);
-        $("#mainPage .small a").on("click", function (event) {
-            // Prompt to change master password
-            var newPassPhrase = window.prompt("New master password:", "");
-            if (newPassPhrase || ("" === newPassPhrase)) {
-                var previousPassPhrase = PassPhrase;
-                var previousCredentialHash = getCredentialHash();
-                removeFromLocalStorage();
-                PassPhrase = newPassPhrase;
-                updateTimestampAndSaveToAllStorage(previousCredentialHash).then(function () {
-                    // Success, clean up remote storage
-                    removeFromRemoteStorage(previousCredentialHash);
-                }).fail(function () {
-                    // Failure, restore old password locally (already unchanged remotely)
-                    removeFromLocalStorage();
-                    PassPhrase = previousPassPhrase;
-                    saveToLocalStorage();
-                    status.showError("Master password update failed; password unchanged!");
-                });
-            }
-            event.preventDefault();
-        });
-        // setTimeout call works around an Internet Explorer bug where textarea/placeholder's input event fires asynchronously on load (http://dlaa.me/blog/post/inputplaceholder)
-        window.setTimeout(function () {
-            clearInactivityTimeout();
-        }, 10);
+    // Initialize
+    render({
+        app: {
+            loginPageVisible: loginPageVisible,
+            mainPageVisible: mainPageVisible,
+            changeMasterPassword: changeMasterPassword,
+            resetInactivityTimeout: resetInactivityTimeout
+        },
+        loginForm: loginForm,
+        faqs: faqs,
+        status: status,
+        userData: userData,
+        entryForm: entryForm
     });
+
+    // setTimeout call works around an Internet Explorer bug where textarea/placeholder's input event fires asynchronously on load (http://dlaa.me/blog/post/inputplaceholder)
+    window.setTimeout(clearInactivityTimeout, 10);
 })();
