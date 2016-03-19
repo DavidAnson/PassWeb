@@ -2,12 +2,12 @@
 
 If you use the Internet much, you have a hundred different passwords for things like email accounts, subscriptions, banking, social media, and the like.
 The best passwords are long and complex (combining letters, numbers, symbols, and punctuation) and never reused across different accounts.
-With so many to remember, some people use a [password manager](http://en.wikipedia.org/wiki/Password_manager) to securely store everything behind a single, memorable master password of suitable complexity.
+With so many to remember, some people use a [password manager](https://en.wikipedia.org/wiki/Password_manager) to securely store everything behind a single, memorable master password of suitable complexity.
 Password managers make it easy to use strong passwords for every account - but they also introduce a single point of failure.
 Much has been said on both sides of the argument and the decision to use a password manager should be made carefully.
 
 If you decide a password manager is right for you, there are different kinds and many options to choose from.
-For my purposes, a [cloud-based](http://en.wikipedia.org/wiki/Password_manager#Advantages) password manager seemed best.
+For my purposes, a [cloud-based](https://en.wikipedia.org/wiki/Password_manager#Advantages) password manager seemed best.
 Thinking about what's important to me, I wanted something:
 
 * Trustworthy
@@ -61,25 +61,25 @@ The client is built using HTML, CSS, and JavaScript on top of the [React](https:
 ## Configuration
 
 * The client for PassWeb is a simple HTML application and can be hosted on any web server or file server.
-  * For [offline mode](http://en.wikipedia.org/wiki/Cache_manifest_in_HTML5) to work, the `offline.appcache` file must be served as type `text/cache-manifest` and should not be cached.
-* The server for PassWeb is a simple [REST API](http://en.wikipedia.org/wiki/Representational_state_transfer) that stores and retrieves blobs of data.
-  * Implementations are provided for both [ASP.NET](http://www.asp.net/) and [Node.js](http://nodejs.org/).
+  * For [offline mode](https://en.wikipedia.org/wiki/Cache_manifest_in_HTML5) to work, the `offline.appcache` file must be served as type `text/cache-manifest` and should not be cached.
+* The server for PassWeb is a simple [REST API](https://en.wikipedia.org/wiki/Representational_state_transfer) that stores and retrieves blobs of data.
+  * Implementations are provided for both [ASP.NET](http://www.asp.net/) and [Node.js](https://nodejs.org/en/).
   * Data is stored as files under an `App_Data` directory, so the account used by the web server needs `modify` permissions for that location.
 * Choose the ASP.NET or Node.js server based on your hosting options or background; the two implementations are equivalent.
-  * The provided [`Web.config`](Web.config) file handles everything when hosted by [IIS on Windows](http://en.wikipedia.org/wiki/Internet_Information_Services).
+  * The provided [`Web.config`](Web.config) file handles everything when hosted by [IIS on Windows](https://en.wikipedia.org/wiki/Internet_Information_Services).
   * Setting up the Node.js server requires familiarity with package management and some manual configuration.
   * The ASP.NET code has been exercised more extensively; a test suite helps ensure both implementations behave the same.
 * With the default settings for the server, creation of new blobs is blocked to prevent unwanted users; the administrator should temporarily unblock when creating a login for a new user.
   * In the ASP.NET implementation, this is done by commenting-out the following line in `App_Code\RemoteStorage.cs`:
 
-    ```
+    ```cs
     // Remove to allow the creation of new files
     #define BLOCK_NEW
     ```
 
   * In the Node.js implementation, this is done by changing the following variable to false in `NodeJs\server.js`:
 
-    ```
+    ```js
     // Set to block the creation of new files
     var BLOCK_NEW = true;
     ```
@@ -88,16 +88,16 @@ The client is built using HTML, CSS, and JavaScript on top of the [React](https:
 ## Implementation
 
 **Offline Use**
-* The encrypted data file is read from and written to both the server API and [HTML local storage](http://en.wikipedia.org/wiki/Web_storage) after every change.
+* The encrypted data file is read from and written to both the server API and [HTML local storage](https://en.wikipedia.org/wiki/Web_storage) after every change.
 * When the server can't be reached (e.g., when offline), changes can be made locally.
 * When the server is reachable during login, local and remote changes are synchronized and both locations are updated.
 * Non-conflicting changes to different accounts merge seamlessly; conflicting edits to a single account are resolved by keeping the most recent entry.
 
 **Account data**
 * All account data is stored in a single, compressed, encrypted file.
-* That file is encrypted using the [Advanced Encryption Standard (AES)](http://en.wikipedia.org/wiki/Advanced_Encryption_Standard) in [Cipher-Block Chaining mode (CBC)](http://en.wikipedia.org/wiki/Block_cipher_mode_of_operation) mode.
+* That file is encrypted using the [Advanced Encryption Standard (AES)](https://en.wikipedia.org/wiki/Advanced_Encryption_Standard) in [Cipher-Block Chaining mode (CBC)](https://en.wikipedia.org/wiki/Block_cipher_mode_of_operation) mode.
 * The 256-bit encryption key is derived from the master password used to log into PassWeb.
-* The file name is derived from the master user name and password by hashing them with [SHA-512](http://en.wikipedia.org/wiki/Secure_Hash_Algorithm).
+* The file name is derived from the master user name and password by hashing them with [SHA-512](https://en.wikipedia.org/wiki/Secure_Hash_Algorithm).
 * The data is only ever decrypted on the client; the server **never** sees the user name, password, or unencrypted data
 
 **Storage API**
@@ -106,9 +106,9 @@ The client is built using HTML, CSS, and JavaScript on top of the [React](https:
 
 **Communication**
 * Because it is always encrypted, the account data file can be transmitted via the storage API over an unsecure HTTP connection.
-* Turning on [HTTPS](http://en.wikipedia.org/wiki/Https) for the storage API prevents tampering and hides the hash of the user name/password (this is enabled by default).
+* Turning on [HTTPS](https://en.wikipedia.org/wiki/HTTPS) for the storage API prevents tampering and hides the hash of the user name/password (this is enabled by default).
 * Enabling HTTPS for the PassWeb client files prevents tampering (you need to enable this on the web server).
-* Mixing HTTP/HTTPS requires the storage API support [Cross-Origin Resource Sharing (CORS)](http://en.wikipedia.org/wiki/Cross-origin_resource_sharing) and requires an update to `offline.appcache`.
+* Mixing HTTP/HTTPS requires the storage API support [Cross-Origin Resource Sharing (CORS)](https://en.wikipedia.org/wiki/Cross-origin_resource_sharing) and requires an update to `offline.appcache`.
 
 
 ## Manifest
@@ -128,19 +128,14 @@ LICENSE | License
 ## Ideas
 
 * Add ability to import data from other password managers
-* Convert to the [Web Cryptography API](http://www.w3.org/TR/WebCryptoAPI/) (when widely available)
+* Convert to the [Web Cryptography API](https://www.w3.org/TR/WebCryptoAPI/) (when widely available)
 * Translate user interface into other languages
 
 
 ## References
 
-* [Secure your passwords (Google)](https://www.google.com/intl/en_US/goodtoknow/online-safety/passwords/)
-* [A guide to staying safe and secure online (Google)](https://www.google.com/intl/en_US/goodtoknow/)
-* [Protect your passwords (Microsoft)](http://www.microsoft.com/security/pc-security/protect-passwords.aspx)
-* [Create strong passwords (Microsoft)](https://www.microsoft.com/security/pc-security/password-checker.aspx)
-* [Safety & Security Center (Microsoft)](http://www.microsoft.com/security/default.aspx)
-* [SDL - Process Guidance - Phase 2: Design](http://msdn.microsoft.com/en-us/library/windows/desktop/cc307414.aspx)
-* [Banned Crypto and the SDL](http://blogs.msdn.com/b/sdl/archive/2009/07/16/banned-crypto-and-the-sdl.aspx)
+* [Google Safety Center](https://www.google.com/safetycenter/)
+* [Microsoft Safety & Security Center](https://www.microsoft.com/en-us/security/)
 
 
 ## License
