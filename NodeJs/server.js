@@ -107,10 +107,10 @@ function writeFile(req, res) {
   var handleEndAndError = function(stream, res) {
     stream
       .on("end", function() {
-        res.send(200, "");
+        res.status(200).send("");
       })
       .on("error", function() {
-        res.send(500);
+        res.sendStatus(500);
       });
   };
   // Helper function to write to a file
@@ -118,7 +118,7 @@ function writeFile(req, res) {
     console.log("Writing: " + mappedFileName);
     backupFile(mappedFileName, function(err) {
       if (err) {
-        res.send(500);
+        res.sendStatus(500);
       } else {
         // Create stream and pipe incoming content to it
         var fileStream = fs.createWriteStream(mappedFileName);
@@ -141,12 +141,12 @@ function writeFile(req, res) {
                 // If file doesn't already exist and no previous file provided or it doesn't exist...
                 if (!exists && (!req.query.previousName || !previousExists)) {
                   // Fail
-                  res.send(500);
+                  res.sendStatus(500);
                 } else {
                   // Backup and write to file
                   backupFile(mappedPreviousFileName, function(err) {
                     if (err) {
-                      res.send(500);
+                      res.sendStatus(500);
                     } else {
                       writeStream(mappedFileName);
                     }
@@ -155,7 +155,7 @@ function writeFile(req, res) {
               });
             });
           } else {
-            res.send(500);
+            res.sendStatus(500);
           }
         });
       } else {
@@ -163,7 +163,7 @@ function writeFile(req, res) {
         writeStream(mappedFileName);
       }
     } else {
-      res.send(500);
+      res.sendStatus(500);
     }
   });
 }
@@ -177,7 +177,7 @@ function listFiles(req, res) {
     // Read directory
     fs.readdir(dir, function(err, files) {
       if (err) {
-        res.send(500);
+        res.sendStatus(500);
       } else {
         // Filter out backup files
         var hiddenFilesRegex = /\.\d\d\d\d\d\d\d\d\d\d\d\d\d-\d+$/;
@@ -186,7 +186,7 @@ function listFiles(req, res) {
         });
         // Add trailing newline and send list
         files.push("");
-        res.send(200, files.join("\r\n"));
+        res.status(200).send(files.join("\r\n"));
       }
     });
   });
@@ -197,13 +197,13 @@ function readFile(req, res) {
   mapFileName(req.query.name, function(mappedFileName) {
     if (mappedFileName) {
       console.log("Reading: " + mappedFileName);
-      res.sendfile(mappedFileName, function(err) {
+      res.sendFile(mappedFileName, function(err) {
         if (err) {
-          res.send(500);
+          res.sendStatus(500);
         }
       });
     } else {
-      res.send(500);
+      res.sendStatus(500);
     }
   });
 }
@@ -218,17 +218,17 @@ function deleteFile(req, res) {
           // Backup implicitly deletes
           backupFile(mappedFileName, function(err) {
             if (err) {
-              res.send(500);
+              res.sendStatus(500);
             } else {
-              res.send(200, "");
+              res.status(200).send("");
             }
           });
         } else {
-          res.send(500);
+          res.sendStatus(500);
         }
       });
     } else {
-      res.send(500);
+      res.sendStatus(500);
     }
   });
 }
@@ -240,12 +240,12 @@ var app = express();
 
 // Configure Express
 app.set("x-powered-by", false);
-app.use(bodyParser.urlencoded());
+app.use(bodyParser.urlencoded({ extended: false }));
 if (STATIC_SERVER) {
   // Configure a custom router to block non-public content
   var rejectRouter = express.Router();
   rejectRouter.use(function(req, res) {
-    res.send(500);
+    res.sendStatus(500);
   });
   app.use("/App_Code", rejectRouter);
   app.use("/App_Data", rejectRouter);
@@ -297,14 +297,14 @@ app.route("/RemoteStorage")
     } else if (ALLOW_LIST) {
       listFiles(req, res);
     } else {
-      res.send(500);
+      res.sendStatus(500);
     }
   })
   .delete(deleteFile);
 
 // Fail all other requests
 app.use(function(req, res) {
-  res.send(500);
+  res.sendStatus(500);
 });
 
 // Start Express server (HTTP)
