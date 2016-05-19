@@ -15,6 +15,8 @@ var THROTTLE_REQUESTS = true;
 var fs = require("fs");
 var path = require("path");
 var stream = require("stream");
+var util = require("util");
+var log = util.debuglog("remotestorage");
 var artificialPrecision = 0;
 var throttleExpiration = Date.now();
 
@@ -111,7 +113,7 @@ function writeFile(req, res) {
   };
   // Helper function to write to a file
   var writeStream = function(mappedFileName) {
-    console.log("Writing: " + mappedFileName);
+    log("Writing: " + mappedFileName);
     backupFile(mappedFileName, function(err) {
       if (err) {
         res.sendStatus(500);
@@ -169,7 +171,7 @@ function listFiles(req, res) {
   // Get data directory
   mapFileName("placeholder", function(mappedFileName) {
     var dir = path.dirname(mappedFileName);
-    console.log("Listing: " + dir);
+    log("Listing: " + dir);
     // Read directory
     fs.readdir(dir, function(err, files) {
       if (err) {
@@ -192,7 +194,7 @@ function listFiles(req, res) {
 function readFile(req, res) {
   mapFileName(req.query.name, function(mappedFileName) {
     if (mappedFileName) {
-      console.log("Reading: " + mappedFileName);
+      log("Reading: " + mappedFileName);
       res.sendFile(mappedFileName, function(err) {
         if (err) {
           res.sendStatus(500);
@@ -208,7 +210,7 @@ function readFile(req, res) {
 function deleteFile(req, res) {
   mapFileName(req.query.name, function(mappedFileName) {
     if (mappedFileName) {
-      console.log("Deleting: " + mappedFileName);
+      log("Deleting: " + mappedFileName);
       fs.exists(mappedFileName, function(exists) {
         if (exists) {
           // Backup implicitly deletes
@@ -250,7 +252,7 @@ function remotestorage(router) {
   router.route("/RemoteStorage")
     .all(function(req, res, next) {
       // Log request and set response type, then hand off to next route
-      console.log(req.method + " " + req.url);
+      log(req.method + " " + req.url);
       res.type("text");
       // Throttle requests to slow enumeration of storage files
       if (THROTTLE_REQUESTS) {

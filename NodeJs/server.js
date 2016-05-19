@@ -41,7 +41,7 @@ app.use(function(req, res) {
 
 // Start Express server (HTTP)
 app.listen(port);
-console.log("Listening on port " + port + "...");
+console.log(__filename + " listening on port " + port + "...");
 // Listen on HTTPS as well
 /* require("https").createServer({
   key: fs.readFileSync(...),
