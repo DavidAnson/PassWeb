@@ -32,7 +32,7 @@ if (STATIC_SERVER) {
 
 // Configure remotestorage middleware
 app.use(bodyParser.urlencoded({ extended: false }));
-app.use(remotestorage(express.Router()));
+app.use(remotestorage(express.Router(), path.resolve(__dirname, "App_Data")));
 
 // Fail all other requests
 app.use(function(req, res) {
