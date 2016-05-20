@@ -43,6 +43,9 @@ var badFileNames = [
 ];
 
 function resetStorage() {
+  if (!fs.existsSync(appDataPath)) {
+    fs.mkdirSync(appDataPath);
+  }
   fs.readdirSync(appDataPath).forEach(function(file) {
     fs.unlinkSync(path.join(appDataPath, file));
   });
