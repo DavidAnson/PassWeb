@@ -1,17 +1,12 @@
 /* jshint node: true, bitwise: true, curly: true, eqeqeq: true, forin: true, freeze: true, immed: true, indent: 4, latedef: true, newcap: true, noarg: true, noempty: true, nonbsp: true, nonew: true, quotmark: double, undef: true, unused: true, strict: true, trailing: true */
-/* global describe, before, it */
+/* global describe, it */
 
 "use strict";
-
-var appDataPath = "../App_Data/PassWeb"; // ASP.NET
-//var appDataPath = "../NodeJs/App_Data"; // Node.js
 
 var ALLOW_LIST = false;
 var BACKUP_FILE = true;
 var BLOCK_NEW = true;
 
-var fs = require("fs");
-var path = require("path");
 var assert = require("assert");
 var request = require("supertest");
 request = request("http://localhost/RemoteStorage/");
@@ -42,15 +37,6 @@ var badFileNames = [
   { name: "g/../../h" }
 ];
 
-function resetStorage() {
-  if (!fs.existsSync(appDataPath)) {
-    fs.mkdirSync(appDataPath);
-  }
-  fs.readdirSync(appDataPath).forEach(function(file) {
-    fs.unlinkSync(path.join(appDataPath, file));
-  });
-}
-
 function forFiles(files, callback, done) {
   var pending = files.slice();
   pending.push(null);
@@ -72,15 +58,47 @@ function getCreateQueryParams(name, extra) {
   var params = { name: name };
   if (BLOCK_NEW) {
     var previousName = name + (extra || "");
-    fs.writeFileSync(path.join(appDataPath, previousName), "");
     params.previousName = previousName;
   }
   return params;
 }
 
-describe("RemoteStorage", function() {
+function bypassBlockNew(name, next) {
+  if (BLOCK_NEW) {
+    var params = {
+      name: name,
+      bypass: true
+    };
+    request
+      .put("")
+      .query(params)
+      .expect("Content-Type", /^text\/plain/)
+      .expect(200, "", next);
+  } else {
+    next();
+  }
+}
 
-  before(resetStorage);
+function assertFileCount(visible, total) {
+  return function(done) {
+    request
+      .get("")
+      .expect(function(res) {
+        assert.strictEqual(res.text.split("\r\n").length - 1, visible);
+      })
+      .end(function() {
+        request
+          .get("")
+          .query({ backups: true })
+          .expect(function(res) {
+            assert.strictEqual(res.text.split("\r\n").length - 1, total);
+          })
+          .end(done);
+      });
+  };
+}
+
+describe("RemoteStorage", function() {
 
   if (ALLOW_LIST) {
     it("should return an empty list for no files", function(done) {
@@ -92,15 +110,32 @@ describe("RemoteStorage", function() {
   }
 
   it("should write each file", function(done) {
-    forFiles(goodFiles, function(file, next) {
-      request
-        .put("")
-        .query(getCreateQueryParams(file.name, ".previous"))
-        .type("text")
-        .send(file.data)
-        .expect("Content-Type", /^text\/plain/)
-        .expect(200, "", next);
-    }, done);
+    var test = function() {
+      forFiles(goodFiles, function(file, next) {
+        request
+          .put("")
+          .query(getCreateQueryParams(file.name, ".previous"))
+          .type("text")
+          .send(file.data)
+          .expect("Content-Type", /^text\/plain/)
+          .expect(200, "", next);
+      }, done);
+    };
+    if (BLOCK_NEW) {
+      forFiles(goodFiles, function(file, next) {
+        var params = {
+          name: file.name + ".previous",
+          bypass: true
+        };
+        request
+          .put("")
+          .query(params)
+          .expect("Content-Type", /^text\/plain/)
+          .expect(200, "", next);
+      }, test);
+    } else {
+      test();
+    }
   });
 
   if (ALLOW_LIST) {
@@ -153,14 +188,14 @@ describe("RemoteStorage", function() {
     }, done);
   });
 
-  if (BACKUP_FILE) {
-    it("should leave backups of changed files", function() {
-      assert.strictEqual((BLOCK_NEW ? 3 : 2) * goodFiles.length, fs.readdirSync(appDataPath).length);
-    });
-  } else {
-    it("should not leave backups of changed files", function() {
-      assert.strictEqual(goodFiles.length, fs.readdirSync(appDataPath).length);
-    });
+  if (ALLOW_LIST) {
+    if (BACKUP_FILE) {
+      it("should leave backups of changed files",
+        assertFileCount(goodFiles.length, (BLOCK_NEW ? 3 : 2) * goodFiles.length));
+    } else {
+      it("should not leave backups of changed files",
+        assertFileCount(goodFiles.length, goodFiles.length));
+    }
   }
 
   it("should fail to delete a file that does not exist", function(done) {
@@ -189,14 +224,14 @@ describe("RemoteStorage", function() {
     });
   }
 
-  if (BACKUP_FILE) {
-    it("should leave backups of deleted files", function() {
-      assert.strictEqual((BLOCK_NEW ? 3 : 2) * goodFiles.length, fs.readdirSync(appDataPath).length);
-    });
-  } else {
-    it("should not leave backups of deleted files", function() {
-      assert.strictEqual(0, fs.readdirSync(appDataPath).length);
-    });
+  if (ALLOW_LIST) {
+    if (BACKUP_FILE) {
+      it("should leave backups of deleted files",
+        assertFileCount(0, (BLOCK_NEW ? 3 : 2) * goodFiles.length));
+    } else {
+      it("should not leave backups of deleted files",
+        assertFileCount(0, 0));
+    }
   }
 
   it("should fail to write a missing file name", function(done) {
@@ -235,96 +270,74 @@ describe("RemoteStorage", function() {
   }
 
   it("should backup/delete when creating with a different name", function(done) {
-    resetStorage();
-    request
-      .put("")
-      .query(getCreateQueryParams("different-names", ".previous"))
-      .expect("Content-Type", /^text\/plain/)
-      .expect(200, "", function() {
-        assert.strictEqual((BACKUP_FILE && BLOCK_NEW ? 2 : 1), fs.readdirSync(appDataPath).length);
-        done();
-      });
+    var cleanup = function() {
+      request
+        .del("")
+        .query({ name: "different-names" })
+        .expect("Content-Type", /^text\/plain/)
+        .expect(200, "", done);
+    };
+    var test = function() {
+      request
+        .put("")
+        .query(getCreateQueryParams("different-names", ".previous"))
+        .expect("Content-Type", /^text\/plain/)
+        .expect(200, "", function() {
+          assertFileCount(1, (BACKUP_FILE && BLOCK_NEW) ? 2 : 1)(cleanup);
+        });
+    };
+    bypassBlockNew("different-names.previous", test);
   });
 
   it("should backup/delete when creating with the same name", function(done) {
-    resetStorage();
-    request
-      .put("")
-      .query(getCreateQueryParams("same-names", ""))
-      .expect("Content-Type", /^text\/plain/)
-      .expect(200, "", function() {
-        assert.strictEqual((BACKUP_FILE && BLOCK_NEW ? 2 : 1), fs.readdirSync(appDataPath).length);
-        done();
-      });
+    var cleanup = function() {
+      request
+        .del("")
+        .query({ name: "same-names" })
+        .expect("Content-Type", /^text\/plain/)
+        .expect(200, "", done);
+    };
+    var test = function() {
+      request
+        .put("")
+        .query(getCreateQueryParams("same-names", ""))
+        .expect("Content-Type", /^text\/plain/)
+        .expect(200, "", function() {
+          assertFileCount(2, (BACKUP_FILE && BLOCK_NEW) ? 2 : 1)(cleanup);
+        });
+    };
+    bypassBlockNew("same-names", test);
   });
 
   it("should be able to update a file and delete it", function(done) {
-    request
-      .put("")
-      .query(getCreateQueryParams("update-file.txt"))
-      .type("text")
-      .send("Hello!")
-      .expect("Content-Type", /^text\/plain/)
-      .expect(200, "", function() {
-        request
-          .get("")
-          .query({ name: "update-file.txt" })
-          .expect("Content-Type", /^text\/plain/)
-          .expect(200, "Hello!", function() {
-            request
-              .put("")
-              .query({ name: "update-file.txt" })
-              .type("text")
-              .send("Bye.")
-              .expect("Content-Type", /^text\/plain/)
-              .expect(200, "", function() {
-                request
-                  .get("")
-                  .query({ name: "update-file.txt" })
-                  .expect("Content-Type", /^text\/plain/)
-                  .expect(200, "Bye.", function() {
-                    request
-                      .del("")
-                      .query({ name: "update-file.txt" })
-                      .expect("Content-Type", /^text\/plain/)
-                      .expect(200, "", done);
-                  });
-              });
-          });
-      });
-  });
-
-  it("should be able to list/create/read/update/delete via POST", function(done) {
-    var body = function() {
-      fs.writeFileSync(path.join(appDataPath, "post-file.txt"), "");
+    var test = function() {
       request
-        .post("")
-        .type("form")
-        .send({ method: "put", name: "post-file.txt", content: "Hello!" })
+        .put("")
+        .query(getCreateQueryParams("update-file.txt"))
+        .type("text")
+        .send("Hello!")
         .expect("Content-Type", /^text\/plain/)
         .expect(200, "", function() {
           request
-            .post("")
-            .type("form")
-            .send({ method: "get", name: "post-file.txt" })
+            .get("")
+            .query({ name: "update-file.txt" })
             .expect("Content-Type", /^text\/plain/)
             .expect(200, "Hello!", function() {
               request
-                .post("")
-                .type("form")
-                .send({ method: "put", name: "post-file.txt", content: "Bye." })
+                .put("")
+                .query({ name: "update-file.txt" })
+                .type("text")
+                .send("Bye.")
                 .expect("Content-Type", /^text\/plain/)
                 .expect(200, "", function() {
                   request
-                    .post("")
-                    .type("form")
-                    .send({ method: "get", name: "post-file.txt" })
+                    .get("")
+                    .query({ name: "update-file.txt" })
                     .expect("Content-Type", /^text\/plain/)
                     .expect(200, "Bye.", function() {
                       request
-                        .post("")
-                        .type("form")
-                        .send({ method: "delete", name: "post-file.txt" })
+                        .del("")
+                        .query({ name: "update-file.txt" })
                         .expect("Content-Type", /^text\/plain/)
                         .expect(200, "", done);
                     });
@@ -332,16 +345,59 @@ describe("RemoteStorage", function() {
             });
         });
     };
-    if (ALLOW_LIST) {
-      request
-        .post("")
-        .type("form")
-        .send({ method: "get" })
-        .expect("Content-Type", /^text\/plain/)
-        .expect(200, "", body);
-    } else {
-      body();
-    }
+    bypassBlockNew("update-file.txt", test);
+  });
+
+  it("should be able to list/create/read/update/delete via POST", function(done) {
+    var test = function() {
+      var body = function() {
+        request
+          .post("")
+          .type("form")
+          .send({ method: "put", name: "post-file.txt", content: "Hello!" })
+          .expect("Content-Type", /^text\/plain/)
+          .expect(200, "", function() {
+            request
+              .post("")
+              .type("form")
+              .send({ method: "get", name: "post-file.txt" })
+              .expect("Content-Type", /^text\/plain/)
+              .expect(200, "Hello!", function() {
+                request
+                  .post("")
+                  .type("form")
+                  .send({ method: "put", name: "post-file.txt", content: "Bye." })
+                  .expect("Content-Type", /^text\/plain/)
+                  .expect(200, "", function() {
+                    request
+                      .post("")
+                      .type("form")
+                      .send({ method: "get", name: "post-file.txt" })
+                      .expect("Content-Type", /^text\/plain/)
+                      .expect(200, "Bye.", function() {
+                        request
+                          .post("")
+                          .type("form")
+                          .send({ method: "delete", name: "post-file.txt" })
+                          .expect("Content-Type", /^text\/plain/)
+                          .expect(200, "", done);
+                      });
+                  });
+              });
+          });
+      };
+      if (ALLOW_LIST) {
+        request
+          .post("")
+          .type("form")
+          .send({ method: "get" })
+          .expect("Content-Type", /^text\/plain/)
+          .expect(200, "", body);
+      } else {
+        body();
+      }
+    };
+    bypassBlockNew("post-file.txt", test);
   });
 
   it("should fail when the method parameter is missing via POST", function(done) {

@@ -13,6 +13,15 @@
 // Remove to allow requests to be handled as fast as possible
 #define THROTTLE_REQUESTS
 
+// Restore to allow bypass of BLOCK_NEW (necessary when testing)
+//#define TEST_ALLOW_BYPASS_BLOCK_NEW
+
+// Restore to allow list to include backup files (necessary when testing)
+//#define TEST_ALLOW_LIST_INCLUDE_BACKUPS
+
+// Restore to use a unique storage directory (preferred when testing)
+//#define TEST_CREATE_UNIQUE_DIRECTORY
+
 using System;
 using System.Diagnostics;
 using System.IO;
@@ -33,6 +42,11 @@ public class RemoteStorage :
     IHttpHandler
 #endif
 {
+#if TEST_CREATE_UNIQUE_DIRECTORY
+    // Unique directory name
+    private static readonly string UniqueDirectory = DateTime.UtcNow.Ticks.ToString();
+#endif
+
 #if SIMPLE_CORS
     // CORS header names
     private const string OriginHeaderName = "Origin";
@@ -144,6 +158,12 @@ public class RemoteStorage :
 #if BLOCK_NEW
         var previousNameParameter = request.Params["previousName"];
 #endif
+#if TEST_ALLOW_LIST_INCLUDE_BACKUPS
+        var backupsParameter = (request.Params["backups"] != null);
+#endif
+#if TEST_ALLOW_BYPASS_BLOCK_NEW
+        var bypassParameter = (request.Params["bypass"] != null);
+#endif
 
         if ("post" == method)
         {
@@ -177,14 +197,24 @@ public class RemoteStorage :
 #if BLOCK_NEW
                 mappedPreviousFileName,
 #endif
-                requestInputStream);
+                requestInputStream
+#if TEST_ALLOW_BYPASS_BLOCK_NEW
+                , bypassParameter
+#endif
+                );
         }
         else if ("get" == method)
         {
             if (null == mappedFileName)
             {
 #if ALLOW_LIST
-                ListFiles(context.Server, responseOutputStream);
+                ListFiles(
+                    context.Server,
+                    responseOutputStream
+#if TEST_ALLOW_LIST_INCLUDE_BACKUPS
+                    , backupsParameter
+#endif
+                    );
 #else
                 throw new NotSupportedException("Missing name parameter for GET method.");
 #endif
@@ -214,13 +244,28 @@ public class RemoteStorage :
     /// </summary>
     /// <param name="serverUtility">HttpServerUtility instance.</param>
     /// <param name="responseOutputStream">Response stream.</param>
-    private void ListFiles(HttpServerUtility serverUtility, Stream responseOutputStream)
+    /// <param name="includeBackups">True iff backups should be included.</param>
+    private void ListFiles(
+        HttpServerUtility serverUtility,
+        Stream responseOutputStream
+#if TEST_ALLOW_LIST_INCLUDE_BACKUPS
+        , bool includeBackups
+#endif
+        )
     {
         using (var writer = new StreamWriter(responseOutputStream))
         {
             var directory = Path.GetDirectoryName(MapFileName(serverUtility, "placeholder"));
             var hiddenFiles = new Regex(@"\.\d\d\d\d\d\d\d\d\d\d\d\d\d\d\d\d\d\d\d\d\d$");
-            foreach (var file in Directory.EnumerateFiles(directory).Where(f => !hiddenFiles.IsMatch(f)))
+            foreach (var file in Directory.EnumerateFiles(directory)
+                     .Where(f =>
+                     {
+                         return
+#if TEST_ALLOW_LIST_INCLUDE_BACKUPS
+                            includeBackups ||
+#endif
+                            !hiddenFiles.IsMatch(f);
+                     }))
             {
                 writer.WriteLine(Path.GetFileName(file));
             }
@@ -244,17 +289,26 @@ public class RemoteStorage :
     /// <param name="mappedFileName">Mapped file name.</param>
     /// <param name="mappedPreviousFileName">Mapped previous file name.</param>
     /// <param name="requestInputStream">Input stream.</param>
+    /// <param name="bypassParameter">True iff bypass of blocking should be allowed.</param>
     private void WriteFile(
         string mappedFileName,
 #if BLOCK_NEW
         string mappedPreviousFileName,
 #endif
-        Stream requestInputStream)
+        Stream requestInputStream
+#if TEST_ALLOW_BYPASS_BLOCK_NEW
+        , bool bypassParameter
+#endif
+        )
     {
 #if BLOCK_NEW
         // Only write a file if it already exists OR the caller identifies a different file that exists (i.e., rename)
         if (!File.Exists(mappedFileName) &&
-            ((null == mappedPreviousFileName) || !File.Exists(mappedPreviousFileName)))
+            ((null == mappedPreviousFileName) || !File.Exists(mappedPreviousFileName))
+#if TEST_ALLOW_BYPASS_BLOCK_NEW
+            && !bypassParameter
+#endif
+           )
         {
             throw new NotSupportedException("Creation of new files is not allowed.");
         }
@@ -328,6 +382,9 @@ public class RemoteStorage :
     {
         // Create App_Data directory (if necessary)
         var appDataDirectory = serverUtility.MapPath("~/App_Data/PassWeb");
+#if TEST_CREATE_UNIQUE_DIRECTORY
+        appDataDirectory = Path.Combine(appDataDirectory, UniqueDirectory);
+#endif
         if (!Directory.Exists(appDataDirectory))
         {
             Directory.CreateDirectory(appDataDirectory);

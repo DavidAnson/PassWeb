@@ -10,6 +10,12 @@ var BACKUP_FILE = true;
 var BLOCK_NEW = true;
 // Set to allow requests to be handled as fast as possible
 var THROTTLE_REQUESTS = true;
+// Set to allow bypass of BLOCK_NEW (necessary when testing)
+var TEST_ALLOW_BYPASS_BLOCK_NEW = false;
+// Set to allow list to include backup files (necessary when testing)
+var TEST_ALLOW_LIST_INCLUDE_BACKUPS = false;
+// Set to use a unique storage directory (preferred when testing)
+var TEST_CREATE_UNIQUE_DIRECTORY = false;
 
 // Initialize variables
 var fs = require("fs");
@@ -21,6 +27,9 @@ var artificialPrecision = 0;
 var throttleExpiration = Date.now();
 
 function remotestorage(router, directory) {
+  if (TEST_CREATE_UNIQUE_DIRECTORY) {
+    directory = path.resolve(__dirname, Date.now().toString());
+  }
 
   // Maps a file name to a fully-qualified local path
   function mapFileName(fileName, callback) {
@@ -105,10 +114,14 @@ function remotestorage(router, directory) {
     var handleEndAndError = function(stream, res) {
       stream
         .on("end", function() {
-          res.status(200).send("");
+          if (!res.finished) {
+            res.status(200).send("");
+          }
         })
         .on("error", function() {
-          res.sendStatus(500);
+          if (!res.finished) {
+            res.sendStatus(500);
+          }
         });
     };
     // Helper function to write to a file
@@ -130,7 +143,7 @@ function remotestorage(router, directory) {
     // Function body
     mapFileName(req.query.name, function(mappedFileName) {
       if (mappedFileName) {
-        if (BLOCK_NEW) {
+        if (BLOCK_NEW && !(TEST_ALLOW_BYPASS_BLOCK_NEW && req.query.bypass)) {
           // Blocking new files, so look for previous file to replace
           mapFileName(req.query.previousName || "placeholder", function(mappedPreviousFileName) {
             if (mappedPreviousFileName) {
@@ -177,11 +190,13 @@ function remotestorage(router, directory) {
         if (err) {
           res.sendStatus(500);
         } else {
-          // Filter out backup files
-          var hiddenFilesRegex = /\.\d\d\d\d\d\d\d\d\d\d\d\d\d-\d+$/;
-          files = files.filter(function(file) {
-            return !hiddenFilesRegex.test(file);
-          });
+          if (!(TEST_ALLOW_LIST_INCLUDE_BACKUPS && req.query.backups)) {
+            // Filter out backup files
+            var hiddenFilesRegex = /\.\d\d\d\d\d\d\d\d\d\d\d\d\d-\d+$/;
+            files = files.filter(function(file) {
+              return !hiddenFilesRegex.test(file);
+            });
+          }
           // Add trailing newline and send list
           files.push("");
           res.status(200).send(files.join("\r\n"));
