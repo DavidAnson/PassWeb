@@ -2,32 +2,14 @@
 
 "use strict";
 
-// Set to allow callers to list files (not required for PassWeb)
-var ALLOW_LIST = false;
-// Set to enable the creation of backup files for each change
-var BACKUP_FILE = true;
-// Set to block the creation of new files
-var BLOCK_NEW = true;
-// Set to allow requests to be handled as fast as possible
-var THROTTLE_REQUESTS = true;
-// Set to allow bypass of BLOCK_NEW (necessary when testing)
-var TEST_ALLOW_BYPASS_BLOCK_NEW = false;
-// Set to allow list to include backup files (necessary when testing)
-var TEST_ALLOW_LIST_INCLUDE_BACKUPS = false;
-// Set to use a unique storage directory (preferred when testing)
-var TEST_CREATE_UNIQUE_DIRECTORY = false;
-
 // Initialize variables
 var fs = require("fs");
 var path = require("path");
-var stream = require("stream");
-var util = require("util");
-var log = util.debuglog("remotestorage");
 var artificialPrecision = 0;
-var throttleExpiration = Date.now();
 
-function remotestorage(router, directory) {
-  if (TEST_CREATE_UNIQUE_DIRECTORY) {
+function create(options, directory) {
+  var log = options.log;
+  if (options.TEST_CREATE_UNIQUE_DIRECTORY) {
     directory = path.resolve(__dirname, Date.now().toString());
   }
 
@@ -72,7 +54,7 @@ function remotestorage(router, directory) {
   function backupFile(mappedFileName, callback) {
     fs.exists(mappedFileName, function(exists) {
       if (exists) {
-        if (BACKUP_FILE) {
+        if (options.BACKUP_FILE) {
           // Get modified time
           fs.stat(mappedFileName, function(err, stats) {
             if (err) {
@@ -143,7 +125,7 @@ function remotestorage(router, directory) {
     // Function body
     mapFileName(req.query.name, function(mappedFileName) {
       if (mappedFileName) {
-        if (BLOCK_NEW && !(TEST_ALLOW_BYPASS_BLOCK_NEW && req.query.bypass)) {
+        if (options.BLOCK_NEW && !(options.TEST_ALLOW_BYPASS_BLOCK_NEW && req.query.bypass)) {
           // Blocking new files, so look for previous file to replace
           mapFileName(req.query.previousName || "placeholder", function(mappedPreviousFileName) {
             if (mappedPreviousFileName) {
@@ -190,7 +172,7 @@ function remotestorage(router, directory) {
         if (err) {
           res.sendStatus(500);
         } else {
-          if (!(TEST_ALLOW_LIST_INCLUDE_BACKUPS && req.query.backups)) {
+          if (!(options.TEST_ALLOW_LIST_INCLUDE_BACKUPS && req.query.backups)) {
             // Filter out backup files
             var hiddenFilesRegex = /\.\d\d\d\d\d\d\d\d\d\d\d\d\d-\d+$/;
             files = files.filter(function(file) {
@@ -246,53 +228,13 @@ function remotestorage(router, directory) {
     });
   }
 
-  // Add route to map POST/method=? calls into the corresponding GET/PUT/DELETE
-  router.route("/RemoteStorage")
-    .post(function(req, res, next) {
-      // Get parameters
-      req.method = (req.body.method || "[MISSING METHOD]").toLowerCase();
-      req.query.name = req.body.name;
-      req.query.previousName = req.body.previousName;
-      // Capture content into a readable stream (to mimic content of GET/PUT/DELETE)
-      var readable = new stream.Readable();
-      readable.push(req.body.content);
-      readable.push(null);
-      req.content = readable;
-      // Hand off to next route
-      next();
-    });
-
-  // Add routes for GET/PUT/DELETE
-  router.route("/RemoteStorage")
-    .all(function(req, res, next) {
-      // Log request and set response type, then hand off to next route
-      log(req.method + " " + req.url);
-      res.type("text");
-      // Throttle requests to slow enumeration of storage files
-      if (THROTTLE_REQUESTS) {
-        var now = Date.now();
-        var waitDuration = Math.max(throttleExpiration - now, 0);
-        throttleExpiration = now + 1000 + waitDuration;
-        setTimeout(function() {
-          next();
-        }, waitDuration);
-      } else {
-        next();
-      }
-    })
-    .put(writeFile)
-    .get(function(req, res) {
-      if (req.query.name) {
-        readFile(req, res);
-      } else if (ALLOW_LIST) {
-        listFiles(req, res);
-      } else {
-        res.sendStatus(500);
-      }
-    })
-    .delete(deleteFile);
-
-  return router;
+  // Return implementation
+  return {
+    deleteFile: deleteFile,
+    listFiles: listFiles,
+    readFile: readFile,
+    writeFile: writeFile
+  };
 }
 
-module.exports = remotestorage;
+module.exports = create;
