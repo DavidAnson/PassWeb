@@ -7,6 +7,9 @@ var stream = require("stream");
 var util = require("util");
 var throttleExpiration = Date.now();
 var options = {
+  // Set to use Azure blob storage instead of local files
+  // Uses standard environment variables AZURE_STORAGE_ACCOUNT/AZURE_STORAGE_ACCESS_KEY
+  BLOB_STORAGE_AZURE: false,
   // Set to allow callers to list files (not required for PassWeb)
   ALLOW_LIST: false,
   // Set to enable the creation of backup files for each change
@@ -27,7 +30,8 @@ var options = {
 
 function remotestorage(router, directory) {
   // Create a specific storage implementation
-  var implementation = require("./storage-file")(options, directory);
+  var storageModule = options.BLOB_STORAGE_AZURE ? "./storage-blob-azure" : "./storage-file";
+  var implementation = require(storageModule)(options, directory);
 
   // Add route to map POST/method=? calls into the corresponding GET/PUT/DELETE
   router.route("/RemoteStorage")

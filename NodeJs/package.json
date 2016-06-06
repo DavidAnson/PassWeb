@@ -6,11 +6,13 @@
   "license": "MIT",
   "private": true,
   "dependencies": {
-    "express": "4.13.4",
-    "body-parser": "1.15.1"
+    "azure-storage": "^1.0.1",
+    "body-parser": "^1.15.1",
+    "express": "^4.13.4",
+    "pify": "^2.3.0"
   },
   "devDependencies": {
-    "mocha": "2.4.5",
-    "supertest": "1.2.0"
+    "mocha": "^2.5.3",
+    "supertest": "^1.2.0"
   }
 }

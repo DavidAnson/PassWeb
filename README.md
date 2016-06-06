@@ -64,12 +64,13 @@ The client is built using HTML, CSS, and JavaScript on top of the [React](https:
   * For [offline mode](https://en.wikipedia.org/wiki/Cache_manifest_in_HTML5) to work, the `offline.appcache` file must be served as type `text/cache-manifest` and should not be cached.
 * The server for PassWeb is a simple [REST API](https://en.wikipedia.org/wiki/Representational_state_transfer) that stores and retrieves blobs of data.
   * Implementations are provided for both [ASP.NET](http://www.asp.net/) and [Node.js](https://nodejs.org/en/).
-  * Data is stored as files under an `App_Data` directory, so the account used by the web server needs `modify` permissions for that location.
-* Choose the ASP.NET or Node.js server based on your hosting options or background; the two implementations are equivalent.
+  * If data is stored as files (under an `App_Data` directory), the account used by the web server needs `modify` permissions for that location.
+  * If data is stored as blobs (supported by the Node.js implementation for [Microsoft Azure](https://azure.microsoft.com/)), permissions to read/write/list/delete are needed.
+* Choose the ASP.NET or Node.js server based on your hosting options or background; the two implementations are (mostly) equivalent.
   * The provided [`Web.config`](Web.config) file handles everything when hosted by [IIS on Windows](https://en.wikipedia.org/wiki/Internet_Information_Services).
   * Setting up the Node.js server requires familiarity with package management and some manual configuration.
-  * The ASP.NET code has been exercised more extensively; a test suite helps ensure both implementations behave the same.
-* With the default settings for the server, creation of new blobs is blocked to prevent unwanted users; the administrator should temporarily unblock when creating a login for a new user.
+  * A test suite helps ensure both implementations behave the same.
+* With default settings for the server, creation of new blobs is blocked to prevent unwanted users; the administrator should temporarily unblock when creating a login for a new user.
   * In the ASP.NET implementation, this is done by commenting-out the following line in `App_Code\RemoteStorage.cs`:
 
     ```cs
@@ -77,11 +78,11 @@ The client is built using HTML, CSS, and JavaScript on top of the [React](https:
     #define BLOCK_NEW
     ```
 
-  * In the Node.js implementation, this is done by changing the following variable to false in `NodeJs\server.js`:
+  * In the Node.js implementation, this is done by changing the following variable to false in `NodeJs\remotestorage.js`:
 
     ```js
     // Set to block the creation of new files
-    var BLOCK_NEW = true;
+    BLOCK_NEW: true,
     ```
 
 
@@ -120,7 +121,7 @@ offline.appcache | Offline cache manifest
 react.min.js <br/> react-dom.min.js <br/> lz-string.min.js <br/> aes.js <br/> sha512.js <br/> | External libraries
 favicon.ico <br/> Resources\\\*.png <br/> Resources\\\*.svg <br/> | Image resources
 App_Code\RemoteStorage.cs <br/> Web.config <br/> *App_Data\\PassWeb\\...* | ASP.NET server
-NodeJs\\server.js <br/> NodeJs\\package.json <br/> *NodeJs\\App_Data\\...* | Node.js server
+NodeJs\\server.js <br/> NodeJs\\remotestorage.js <br/> NodeJs\\storage-file.js <br/> NodeJs\\storage-blob-azure.js <br/> NodeJs\\package.json <br/> | Node.js server
 Readme.md | This file
 LICENSE | License
 
@@ -129,7 +130,6 @@ LICENSE | License
 
 * Add ability to import data from other password managers
 * Convert to the [Web Cryptography API](https://www.w3.org/TR/WebCryptoAPI/) (when widely available)
-* Translate user interface into other languages
 
 
 ## References
