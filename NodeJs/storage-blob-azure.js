@@ -20,6 +20,7 @@ function create(options, container) {
   var createContainerIfNotExistsPromise = pify(service.createContainerIfNotExists.bind(service));
   var deleteBlobPromise = pify(service.deleteBlob.bind(service));
   var doesBlobExistPromise = pify(service.doesBlobExist.bind(service));
+  var getBlobMetadataPromise = pify(service.getBlobMetadata.bind(service));
   var listBlobsSegmentedPromise = pify(service.listBlobsSegmented.bind(service));
 
   // Backup (if necessary) and delete
@@ -41,7 +42,6 @@ function create(options, container) {
     log("Writing: " + blob);
     Promise.resolve()
       .then(function() {
-        // Validate parameters
         var badName = /[\/\\]/;
         if (!blob || badName.test(blob) || (previousBlob && badName.test(previousBlob))) {
           throw new Error("Invalid arguments to writeFile.");
@@ -144,19 +144,32 @@ function create(options, container) {
   function readFile(req, res) {
     var blob = req.query.name;
     log("Reading: " + blob);
-    // Validate parameters
-    if (!blob) {
-      return res.sendStatus(500);
-    }
-    service.createReadStream(container, blob, function(error) {
-      if (error && !res.finished) {
+    Promise.resolve()
+      .then(function() {
+        if (!blob) {
+          throw new Error("Invalid arguments to readFile.");
+        }
+      })
+      .then(function() {
+        return getBlobMetadataPromise(container, blob);
+      })
+      .then(function(result) {
+        if (result.metadata.deleted) {
+          throw new Error("Blocking read of deleted file.");
+        }
+        service.createReadStream(container, blob, function(error) {
+          if (error && !res.finished) {
+            res.sendStatus(500);
+          }
+        })
+        .on("error", function() {
+          res.sendStatus(500);
+        })
+        .pipe(res);
+      })
+      .catch(function() {
         res.sendStatus(500);
-      }
-    })
-    .on("error", function() {
-      res.sendStatus(500);
-    })
-    .pipe(res);
+      });
   }
 
   // Delete file
@@ -165,7 +178,6 @@ function create(options, container) {
     log("Deleting: " + blob);
     Promise.resolve()
       .then(function() {
-        // Validate parameters
         if (!blob) {
           throw new Error("Invalid arguments to deleteFile.");
         }

@@ -224,6 +224,15 @@ describe("RemoteStorage", function() {
     });
   }
 
+  it("should not be able to read deleted files", function(done) {
+    forFiles(goodFiles, function(file, next) {
+      request
+        .get("")
+        .query({ name: file.name })
+        .expect(500, next);
+    }, done);
+  });
+
   if (ALLOW_LIST) {
     if (BACKUP_FILE) {
       it("should leave backups of deleted files",
