@@ -3,6 +3,7 @@
 "use strict";
 
 // Initialize variables
+var process = require("process");
 var stream = require("stream");
 var util = require("util");
 var throttleExpiration = Date.now();
@@ -14,8 +15,8 @@ var options = {
   ALLOW_LIST: false,
   // Set to enable the creation of backup files for each change
   BACKUP_FILE: true,
-  // Set to block the creation of new files
-  BLOCK_NEW: true,
+  // Set to block the creation of new files (set environment variable to "false" to override)
+  BLOCK_NEW: process.env.BLOCK_NEW !== "false",
   // Set to allow requests to be handled as fast as possible
   THROTTLE_REQUESTS: true,
   // Set to allow bypass of BLOCK_NEW (necessary when testing)
