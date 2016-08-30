@@ -189,6 +189,12 @@ const EntryItem = React.createClass({
   render: function() {
     const dataMask = "********";
     const entry = this.props.entry;
+    const titleTip = entry.id + (entry.insecure ? " [Insecure: Not HTTPS]" : "");
+    const titleContent = entry.website ? (
+      <a href={entry.website} title={titleTip} target="_blank" rel="noopener">{entry.id}</a>
+    ) : (
+      <span title={titleTip}>{entry.id}</span>
+    );
     const content = this.state.drawerOpen ? (
       <pre className="content">{entry.notes}</pre>
     ) : null;
@@ -203,7 +209,7 @@ const EntryItem = React.createClass({
     return (
       <div className="block">
         <div className="banner">
-          <div title={entry.id} className="title ellipsis">{entry.website ? <a href={entry.website} target="_blank" rel="noopener">{entry.id}</a> : entry.id}</div>
+          <div className={"title ellipsis" + (entry.insecure ? " insecure" : "")}>{titleContent}</div>
           <a onClick={this.onClickEdit} href="#" className="edit"><img src="Resources/Edit.svg" alt="Edit" title="Edit" className="icon"/></a>
           <a onClick={this.onClickRemove} href="#" className="remove"><img src="Resources/Close.svg" alt="Delete" title="Delete" className="icon"/></a>
         </div>

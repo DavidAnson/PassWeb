@@ -134,7 +134,7 @@ a, a:active, a:hover, a:visited {
     border-left: 1px dotted rgba(0, 0, 0, 0.5); /* black, 50% */
 }
 
-#entriesList .userpass .weak :hover {
+#entriesList .userpass .weak :hover, #entriesList .banner .title.insecure :hover {
     background-color: rgba(255, 0, 0, 0.3); /* red, 30% */
 }
 

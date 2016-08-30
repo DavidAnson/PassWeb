@@ -268,7 +268,8 @@
                     password: self.password(),
                     website: self.website(),
                     notes: self.notes().trim(),
-                    weak: isWeakPassword(self.password())
+                    weak: isWeakPassword(self.password()),
+                    insecure: isInsecureWebsite(self.website())
                 };
                 var entries = userData.entries();
                 var existing = entries.filter(function (e) {
@@ -391,6 +392,7 @@
                 }).sort(entryComparer);
                 data.entries.forEach(function (e) {
                     e.weak = isWeakPassword(e.password);
+                    e.insecure = isInsecureWebsite(e.website);
                 });
                 if (0 === userData.timestamp) {
                     // No data has been loaded yet; use imported data as-is
@@ -651,6 +653,11 @@
         } else {
             return "";
         }
+    }
+
+    function isInsecureWebsite(website) {
+        var https = /^https:/i;
+        return website && !https.test(website);
     }
 
     // Inactivity timeout reloads the page if the user hasn't interacted with it for a while
