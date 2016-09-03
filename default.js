@@ -91,6 +91,25 @@
         self.filter = observable("");
         self.visibleEntries = observable(self.entries());
 
+        // Finds any passwords that are used more than once
+        function findReusedPasswords() {
+            var passwords = {};
+            var entries = self.entries();
+            entries.forEach(function (entry) {
+                passwords[entry.password] = (passwords[entry.password] || 0) + 1;
+            });
+            entries.forEach(function (entry, index) {
+                var reused = (1 < passwords[entry.password]) ? "[Weak: Not unique]" : "";
+                if (entry.reused !== reused) {
+                    // Fake immutability
+                    entry = clone(entry);
+                    entry.reused = reused;
+                    entries[index] = entry;
+                }
+            });
+        }
+        self.entries.subscribe(findReusedPasswords);
+
         // Filters the entries according to the search text
         function filterEntries() {
             var filterUpper = self.filter().toLocaleUpperCase();
@@ -692,7 +711,7 @@
 
     // Safe wrapper for navigator
     function navigatorOnLine() {
-      return !window.navigator || navigator.onLine;
+        return !window.navigator || navigator.onLine;
     }
 
     // Logs a network failure message to the console
@@ -706,6 +725,19 @@
         if (window.console && window.console.log) {
             window.console.log(message);
         }
+    }
+
+    // Applies key/value pairs from src to dst, returning dst
+    function assign(dst, src) {
+        Object.keys(src).forEach(function forKey(key) {
+            dst[key] = src[key];
+        });
+        return dst;
+    }
+
+    // Clones the key/value pairs of obj, returning the clone
+    function clone(obj) {
+        return assign({}, obj);
     }
 
     // Creates many entries for testing

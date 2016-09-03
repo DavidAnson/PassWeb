@@ -161,7 +161,7 @@ const EntryWrapper = React.createClass({
     const entry = this.props.entry;
     const userData = this.props.userData;
     return (
-      <li style={{ display: this.props.visible ? null : "none"}}>
+      <li style={{ display: this.props.visible ? null : "none" }}>
         <EntryItem entry={entry} userData={userData}/>
       </li>
     );
@@ -189,6 +189,7 @@ const EntryItem = React.createClass({
   render: function() {
     const dataMask = "********";
     const entry = this.props.entry;
+    const weakMessage = entry.reused || entry.weak;
     const titleTip = entry.id + (entry.insecure ? " [Insecure: Not HTTPS]" : "");
     const titleContent = entry.website ? (
       <a href={entry.website} title={titleTip} target="_blank" rel="noopener">{entry.id}</a>
@@ -216,7 +217,7 @@ const EntryItem = React.createClass({
         <div className="userpass">
           <div>&nbsp;</div>
           <div className="username"><a onClick={this.onClickCopyusername} href="#" className="ellipsis">{entry.username}</a></div>
-          <div className={"password" + (entry.weak ? " weak" : "")} title={entry.weak}><a onClick={this.onClickCopypassword} data-mask={dataMask} href="#" className="ellipsis">{dataMask}</a></div>
+          <div className={"password" + (weakMessage ? " weak" : "")} title={weakMessage}><a onClick={this.onClickCopypassword} data-mask={dataMask} href="#" className="ellipsis">{dataMask}</a></div>
         </div>
         {notes}
       </div>
