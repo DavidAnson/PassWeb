@@ -331,25 +331,49 @@
         self.generatePassword = function () {
             resetInactivityTimeout();
             if (self.expanded() && (self.generating() || !self.password().length)) {
+                var lower = "abcdefghijklmnopqrstuvwxyz";
+                var upper = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+                var numbers = "0123456789";
+                var symbols = "!\"#$%&'()*+,-./:;<=>?@[\\]^_`{|}~";
                 var pool = "";
                 if (self.passwordLower()) {
-                    pool += "abcdefghijklmnopqrstuvwxyz";
+                    pool += lower;
                 }
                 if (self.passwordUpper()) {
-                    pool += "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+                    pool += upper;
                 }
                 if (self.passwordNumbers()) {
-                    pool += "0123456789";
+                    pool += numbers;
                 }
                 if (self.passwordSymbols()) {
-                    pool += "!\"#$%&'()*+,-./:;<=>?@[\\]^_`{|}~";
+                    pool += symbols;
                 }
-                var password = "";
+                var password;
                 if (pool.length) {
-                    var i;
-                    for (i = 0; i < self.passwordLength() ; i++) {
-                        password += (pool[self.getRandomInt(0, pool.length - 1)]);
-                    }
+                    var needsLower;
+                    var needsUpper;
+                    var needsNumbers;
+                    var needsSymbols;
+                    var hasCategories = function (char) {
+                        needsLower &= lower.indexOf(char) === -1;
+                        needsUpper &= upper.indexOf(char) === -1;
+                        needsNumbers &= numbers.indexOf(char) === -1;
+                        needsSymbols &= symbols.indexOf(char) === -1;
+                    };
+                    do {
+                        password = "";
+                        // Pick random characters from pool
+                        var i;
+                        for (i = 0; i < self.passwordLength() ; i++) {
+                            password += (pool[self.getRandomInt(0, pool.length - 1)]);
+                        }
+                        // Ensure at least one of each category is present
+                        needsLower = self.passwordLower();
+                        needsUpper = self.passwordUpper();
+                        needsNumbers = self.passwordNumbers();
+                        needsSymbols = self.passwordSymbols();
+                        Array.prototype.forEach.call(password, hasCategories);
+                    } while(needsLower || needsUpper || needsNumbers || needsSymbols);
                 }
                 self.password(password);
             }
