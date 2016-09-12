@@ -4,6 +4,9 @@
 (function (undefined) {
     "use strict";
 
+    var crypto = window.crypto;
+    var subtleCrypto = crypto.subtle;
+
     // Master user name/pass phrase
     var UserNameUpper;
     var PassPhrase;
@@ -12,9 +15,18 @@
     // String added to hash/encryption key to make each PassWeb instance unique
     var UniqueText = window.location.hostname.toLocaleUpperCase();
 
-    // Hashes the user name+password+unique text to determine the data file name
-    function getCredentialHash() {
-        return CryptoJS.SHA512(UserNameUpper + PassPhrase + UniqueText).toString();
+    // Hash of the user name+password+unique text to determine the data file name
+    var CredentialHash;
+
+    // Updates the credential hash
+    function updateCredentialHash() {
+        var buffer = new TextEncoder("utf-8").encode(UserNameUpper + PassPhrase + UniqueText);
+        return subtleCrypto.digest("SHA-512", buffer).then(function (hash) {
+            CredentialHash = toHexString(hash);
+            if (CredentialHash !== CryptoJS.SHA512(UserNameUpper + PassPhrase + UniqueText).toString()) {
+                throw new Error("CRYPTO DIGEST VALIDATION ERROR");
+            }
+        });
     }
 
     // Gets the encryption key
@@ -40,13 +52,15 @@
             PassPhrase = self.password();
             CacheLocally = self.cache();
             localStorageSetItem(cacheKey, CacheLocally.toString());
-            if (!CacheLocally) {
-                // Delete any previously saved data
-                removeFromLocalStorage();
-            }
-            enableMainPage(true);
-            readFromLocalStorage();
-            readFromRemoteStorage();
+            updateCredentialHash().then(function () {
+                if (!CacheLocally) {
+                    // Delete any previously saved data
+                    removeFromLocalStorage();
+                }
+                enableMainPage(true);
+                readFromLocalStorage();
+                readFromRemoteStorage();
+            });
         };
     }
     var loginForm = new LoginForm();
@@ -390,7 +404,7 @@
             try {
                 // No feature-detection; need to handle QuotaExceededError regardless
                 var array = new Uint32Array(1);
-                window.crypto.getRandomValues(array);
+                crypto.getRandomValues(array);
                 return (array[0] & ((1 << 30) - 1)) / (1 << 30);
             } catch (ex) {
                 return Math.random();
@@ -414,103 +428,105 @@
 
     // Merges imported data with what has already been loaded
     function mergeImportedData(encodedData, fromLocalStorage) {
-        var data;
-        try {
-            data = decode(encodedData);
+        return decode(encodedData).then(function (data) {
             enableMainPage(true);
-        } catch (ex) {
-            enableMainPage(false);
-            return "Decryption failure for " + (fromLocalStorage ? "local" : "cloud") + " data. Wrong password?";
-        }
-        if (data && (1 === data.schema)) {
-            if (userData.timestamp !== data.timestamp) {
-                // Different data
-                var validDataEntries = data.entries.filter(function (e) {
-                    return e.hasOwnProperty("timestamp") &&
-                           e.hasOwnProperty("id") &&
-                           e.hasOwnProperty("username") &&
-                           e.hasOwnProperty("password") &&
-                           e.hasOwnProperty("website") &&
-                           e.hasOwnProperty("notes");
-                }).sort(entryComparer);
-                data.entries.forEach(function (e) {
-                    e.weak = isWeakPassword(e.password);
-                    e.insecure = isInsecureWebsite(e.website);
-                });
-                if (0 === userData.timestamp) {
-                    // No data has been loaded yet; use imported data as-is
-                    userData.timestamp = data.timestamp;
-                    userData.entries(validDataEntries);
-                    if (!fromLocalStorage) {
-                        saveToLocalStorage();
-                    }
-                } else {
-                    // Merge loaded data with new data
-                    var changed = false;
-                    var userDataEntries = userData.entries().slice(); // Clone so pop() doesn't affect the original
-                    var mergedEntries = [];
-                    var sentinel = { id: "", timestamp: 0 };
-                    // Walk both lists in parallel
-                    var compareResult;
-                    var uniqueEntry;
-                    var otherListTimestamp;
-                    var userDataEntry = userDataEntries.pop() || sentinel;
-                    var validDataEntry = validDataEntries.pop() || sentinel;
-                    while ((userDataEntry !== sentinel) || (validDataEntry !== sentinel)) {
-                        compareResult = entryComparer(userDataEntry, validDataEntry);
-                        if (0 === compareResult) {
-                            // Same entry; pick the most recent
-                            if (userDataEntry.timestamp === validDataEntry.timestamp) {
-                                mergedEntries.push(userDataEntry);
-                            } else if (userDataEntry.timestamp < validDataEntry.timestamp) {
-                                mergedEntries.push(validDataEntry);
-                                changed = true;
-                            } else {
-                                mergedEntries.push(userDataEntry);
-                                changed = true;
-                            }
-                            // Advance both lists
-                            userDataEntry = userDataEntries.pop() || sentinel;
-                            validDataEntry = validDataEntries.pop() || sentinel;
-                        } else {
-                            // Different entries, work with the "biggest"
-                            if (compareResult < 0) {
-                                uniqueEntry = validDataEntry;
-                                validDataEntry = validDataEntries.pop() || sentinel;
-                                otherListTimestamp = userData.timestamp;
-                            } else {
-                                uniqueEntry = userDataEntry;
-                                userDataEntry = userDataEntries.pop() || sentinel;
-                                otherListTimestamp = data.timestamp;
-                            }
-                            if (otherListTimestamp < uniqueEntry.timestamp) {
-                                // Include entry created after other list was modified (addition)
-                                mergedEntries.push(uniqueEntry);
-                            } /* else {
-                                // Exclude entry absent from other list (deletion)
-                            } */
-                            changed = true;
-                        }
-                    }
-                    if (changed) {
-                        // Update local/remote storage with merged results
-                        mergedEntries.reverse();
-                        userData.entries(mergedEntries);
-                        updateTimestampAndSaveToAllStorage();
+            if (data && (1 === data.schema)) {
+                if (userData.timestamp !== data.timestamp) {
+                    // Different data
+                    var validDataEntries = data.entries.filter(function (e) {
+                        return e.hasOwnProperty("timestamp") &&
+                            e.hasOwnProperty("id") &&
+                            e.hasOwnProperty("username") &&
+                            e.hasOwnProperty("password") &&
+                            e.hasOwnProperty("website") &&
+                            e.hasOwnProperty("notes");
+                    }).sort(entryComparer);
+                    data.entries.forEach(function (e) {
+                        e.weak = isWeakPassword(e.password);
+                        e.insecure = isInsecureWebsite(e.website);
+                    });
+                    if (0 === userData.timestamp) {
+                        // No data has been loaded yet; use imported data as-is
+                        userData.timestamp = data.timestamp;
+                        userData.entries(validDataEntries);
                         if (!fromLocalStorage) {
-                            return "Cloud data had changes; local and cloud are now synchronized.";
+                            saveToLocalStorage();
                         }
                     } else {
-                        // No changes; update local timestamp to match
-                        userData.timestamp = data.timestamp;
-                        saveToLocalStorage();
+                        // Merge loaded data with new data
+                        var changed = false;
+                        var userDataEntries = userData.entries().slice(); // Clone so pop() doesn't affect the original
+                        var mergedEntries = [];
+                        var sentinel = { id: "", timestamp: 0 };
+                        // Walk both lists in parallel
+                        var compareResult;
+                        var uniqueEntry;
+                        var otherListTimestamp;
+                        var userDataEntry = userDataEntries.pop() || sentinel;
+                        var validDataEntry = validDataEntries.pop() || sentinel;
+                        while ((userDataEntry !== sentinel) || (validDataEntry !== sentinel)) {
+                            compareResult = entryComparer(userDataEntry, validDataEntry);
+                            if (0 === compareResult) {
+                                // Same entry; pick the most recent
+                                if (userDataEntry.timestamp === validDataEntry.timestamp) {
+                                    mergedEntries.push(userDataEntry);
+                                } else if (userDataEntry.timestamp < validDataEntry.timestamp) {
+                                    mergedEntries.push(validDataEntry);
+                                    changed = true;
+                                } else {
+                                    mergedEntries.push(userDataEntry);
+                                    changed = true;
+                                }
+                                // Advance both lists
+                                userDataEntry = userDataEntries.pop() || sentinel;
+                                validDataEntry = validDataEntries.pop() || sentinel;
+                            } else {
+                                // Different entries, work with the "biggest"
+                                if (compareResult < 0) {
+                                    uniqueEntry = validDataEntry;
+                                    validDataEntry = validDataEntries.pop() || sentinel;
+                                    otherListTimestamp = userData.timestamp;
+                                } else {
+                                    uniqueEntry = userDataEntry;
+                                    userDataEntry = userDataEntries.pop() || sentinel;
+                                    otherListTimestamp = data.timestamp;
+                                }
+                                if (otherListTimestamp < uniqueEntry.timestamp) {
+                                    // Include entry created after other list was modified (addition)
+                                    mergedEntries.push(uniqueEntry);
+                                } /* else {
+                                    // Exclude entry absent from other list (deletion)
+                                } */
+                                changed = true;
+                            }
+                        }
+                        if (changed) {
+                            // Update local/remote storage with merged results
+                            mergedEntries.reverse();
+                            userData.entries(mergedEntries);
+                            updateTimestampAndSaveToAllStorage();
+                            if (!fromLocalStorage) {
+                                return "Cloud data had changes; local and cloud are now synchronized.";
+                            }
+                        } else {
+                            // No changes; update local timestamp to match
+                            userData.timestamp = data.timestamp;
+                            saveToLocalStorage();
+                        }
                     }
                 }
+            } else {
+                return "Unsupported schema or corrupt data.";
             }
-        } else {
-            return "Unsupported schema or corrupt data.";
-        }
-        return null;
+            return null;
+        }).catch(function (ex) {
+            enableMainPage(false);
+            return "Decryption failure for " + (fromLocalStorage ? "local" : "cloud") + " data. Wrong password?";
+        }).then(function (result) {
+            if (result) {
+                throw new Error(result);
+            }
+        });
     }
 
     function changeMasterPassword() {
@@ -518,20 +534,24 @@
         var newPassPhrase = window.prompt("New master password:", "");
         if (newPassPhrase || ("" === newPassPhrase)) {
             var previousPassPhrase = PassPhrase;
-            var previousCredentialHash = getCredentialHash();
+            var previousCredentialHash = CredentialHash;
             removeFromLocalStorage();
             PassPhrase = newPassPhrase;
-            updateTimestampAndSaveToAllStorage(previousCredentialHash, function (success) {
-                if (success) {
-                    // Success, clean up remote storage
-                    removeFromRemoteStorage(previousCredentialHash);
-                } else {
-                    // Failure, restore old password locally (already unchanged remotely)
-                    removeFromLocalStorage();
-                    PassPhrase = previousPassPhrase;
-                    saveToLocalStorage();
-                    status.showError("Master password update failed; password unchanged!");
-                }
+            updateCredentialHash().then(function () {
+                updateTimestampAndSaveToAllStorage(previousCredentialHash, function (success) {
+                    if (success) {
+                        // Success, clean up remote storage
+                        removeFromRemoteStorage(previousCredentialHash);
+                    } else {
+                        // Failure, restore old password locally (already unchanged remotely)
+                        removeFromLocalStorage();
+                        PassPhrase = previousPassPhrase;
+                        updateCredentialHash().then(function () {
+                            saveToLocalStorage();
+                            status.showError("Master password update failed; password unchanged!");
+                        });
+                    }
+                });
             });
         }
     }
@@ -545,26 +565,26 @@
 
     // Reads data from local storage
     function readFromLocalStorage() {
-        var item = localStorageGetItem(getCredentialHash());
+        var item = localStorageGetItem(CredentialHash);
         if (item) {
-            var result = mergeImportedData(item, true);
-            if (result) {
-                status.showError(result);
-            }
+            mergeImportedData(item, true).catch(function (error) {
+                status.showError(error.message);
+            });
         }
     }
 
     // Saves data to local storage
     function saveToLocalStorage() {
         if (CacheLocally) {
-            var item = encode(userData);
-            localStorageSetItem(getCredentialHash(), item);
+            encode(userData).then(function (item) {
+                localStorageSetItem(CredentialHash, item);
+            });
         }
     }
 
     // Removes data from local storage
     function removeFromLocalStorage() {
-        localStorageRemoveItem(getCredentialHash());
+        localStorageRemoveItem(CredentialHash);
     }
 
     // Gets the remote storage URI, converting to HTTPS if not already using it (unless using localhost)
@@ -583,13 +603,12 @@
             getRemoteStorageUri(),
             "GET",
             {
-                name: getCredentialHash()
+                name: CredentialHash
             },
             function (responseText) {
-                var result = mergeImportedData(responseText, false);
-                if (result) {
-                    status.showError(result);
-                }
+               mergeImportedData(responseText, false).catch(function (error) {
+                   status.showError(error.message);
+               });
             },
             function () {
                 var implication = userData.entries().length ? "using local data" : "no local data available";
@@ -608,31 +627,33 @@
     function saveToRemoteStorage(previousName, callback) {
         status.showProgress("Saving to cloud...");
         var success = true;
-        ajax(
-            getRemoteStorageUri(),
-            "POST",
-            {
-                method: "PUT",
-                name: getCredentialHash(),
-                previousName: previousName,
-                content: encode(userData)
-            },
-            null,
-            function () {
-                var implication = CacheLocally ? "Data was saved locally; cloud will be updated when possible." : "Not caching, so data may be lost when browser is closed!";
-                var reason = navigatorOnLine() ? "" : " (Network appears offline.)";
-                var message = "Error saving to cloud. " + implication + reason;
-                status.showError(message);
-                logNetworkFailure(message);
-                success = false;
-            },
-            function () {
-                status.showProgress(null);
-                if (callback) {
-                    callback(success);
+        encode(userData).then(function (content) {
+            ajax(
+                getRemoteStorageUri(),
+                "POST",
+                {
+                    method: "PUT",
+                    name: CredentialHash,
+                    previousName: previousName,
+                    content: content
+                },
+                null,
+                function () {
+                    var implication = CacheLocally ? "Data was saved locally; cloud will be updated when possible." : "Not caching, so data may be lost when browser is closed!";
+                    var reason = navigatorOnLine() ? "" : " (Network appears offline.)";
+                    var message = "Error saving to cloud. " + implication + reason;
+                    status.showError(message);
+                    logNetworkFailure(message);
+                    success = false;
+                },
+                function () {
+                    status.showProgress(null);
+                    if (callback) {
+                        callback(success);
+                    }
                 }
-            }
-        );
+            );
+        });
     }
 
     // Removes data from remote storage
@@ -653,18 +674,22 @@
 
     // Encrypts and compresses all entries
     function encode(data) {
-        var json = JSON.stringify(data, ["schema", "timestamp", "entries", "id", "username", "password", "website", "notes"]);
-        var base64 = LZString.compressToBase64(json);
-        var cipherParams = CryptoJS.AES.encrypt(base64, getEncryptionKey());
-        return cipherParams.toString();
+        return Promise.resolve().then(function () {
+            var json = JSON.stringify(data, ["schema", "timestamp", "entries", "id", "username", "password", "website", "notes"]);
+            var base64 = LZString.compressToBase64(json);
+            var cipherParams = CryptoJS.AES.encrypt(base64, getEncryptionKey());
+            return cipherParams.toString();
+        });
     }
 
     // Decrypts and decompresses all entries
     function decode(data) {
-        var cipherParams = CryptoJS.AES.decrypt(data, getEncryptionKey());
-        var base64 = cipherParams.toString(CryptoJS.enc.Utf8);
-        var json = base64 ? LZString.decompressFromBase64(base64) : "";
-        return JSON.parse(json);
+        return Promise.resolve().then(function () {
+            var cipherParams = CryptoJS.AES.decrypt(data, getEncryptionKey());
+            var base64 = cipherParams.toString(CryptoJS.enc.Utf8);
+            var json = base64 ? LZString.decompressFromBase64(base64) : "";
+            return JSON.parse(json);
+        });
     }
 
     // Compares entry IDs locale-aware
@@ -741,7 +766,7 @@
     // Logs a network failure message to the console
     function logNetworkFailure(message) {
         consoleLog(message);
-        consoleLog("File name: " + getCredentialHash());
+        consoleLog("File name: " + CredentialHash);
     }
 
     // Logs a message to the console
@@ -749,6 +774,13 @@
         if (window.console && window.console.log) {
             window.console.log(message);
         }
+    }
+
+    function toHexString(buffer) {
+        var view = new Uint8Array(buffer);
+        return view.reduce(function (previous, current) {
+            return previous + (current < 16 ? "0" : "") + current.toString(16);
+        }, "");
     }
 
     // Applies key/value pairs from src to dst, returning dst
