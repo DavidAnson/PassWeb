@@ -12,9 +12,39 @@
     // String added to hash/encryption key to make each PassWeb instance unique
     var UniqueText = window.location.hostname.toLocaleUpperCase();
 
+    // Customize CryptoJS algorithms
+    var CryptoJS_algo_EvpKDF = CryptoJS.algo.EvpKDF;
+    var CryptoJS_algo_PBKDF2 = CryptoJS.algo.PBKDF2.create({
+        hasher: CryptoJS.algo.SHA512,
+        iterations: 1000
+    });
+    var CryptoJS_lib_PasswordBasedCipher = CryptoJS.lib.PasswordBasedCipher.extend({
+        init: function(cfg) {
+            this.cfg = this.cfg.extend(cfg);
+        }
+    });
+
     // Hashes the user name+password+unique text to determine the data file name
     function getCredentialHash() {
         return CryptoJS.SHA512(UserNameUpper + PassPhrase + UniqueText).toString();
+    }
+
+    // Gets a password-based cipher with the specified key derivation function
+    function getCipher(algorithm) {
+        return CryptoJS_lib_PasswordBasedCipher.create({
+            kdf: {
+                // Algorithm-independent implementation of CryptoJS.kdf.OpenSSL
+                execute: function (password, keySize, ivSize, salt) {
+                    if (!salt) {
+                        salt = CryptoJS.lib.WordArray.random(64 / 8);
+                    }
+                    var key = algorithm.create({ keySize: keySize + ivSize }).compute(password, salt);
+                    var iv = CryptoJS.lib.WordArray.create(key.words.slice(keySize), ivSize * 4);
+                    key.sigBytes = keySize * 4;
+                    return CryptoJS.lib.CipherParams.create({ key: key, iv: iv, salt: salt });
+                }
+            }
+        });
     }
 
     // Gets the encryption key
@@ -655,16 +685,26 @@
     function encode(data) {
         var json = JSON.stringify(data, ["schema", "timestamp", "entries", "id", "username", "password", "website", "notes"]);
         var base64 = LZString.compressToBase64(json);
-        var cipherParams = CryptoJS.AES.encrypt(base64, getEncryptionKey());
+        var cipherParams = getCipher(CryptoJS_algo_PBKDF2).encrypt(CryptoJS.algo.AES, base64, getEncryptionKey());
         return cipherParams.toString();
     }
 
     // Decrypts and decompresses all entries
     function decode(data) {
-        var cipherParams = CryptoJS.AES.decrypt(data, getEncryptionKey());
-        var base64 = cipherParams.toString(CryptoJS.enc.Utf8);
-        var json = base64 ? LZString.decompressFromBase64(base64) : "";
-        return JSON.parse(json);
+        var kdfs = [CryptoJS_algo_PBKDF2, CryptoJS_algo_EvpKDF];
+        var kdf;
+        while (kdf = kdfs.shift()) {
+            try {
+                var cipherParams = getCipher(kdf).decrypt(CryptoJS.algo.AES, data, getEncryptionKey());
+                var base64 = cipherParams.toString(CryptoJS.enc.Utf8);
+                var json = base64 ? LZString.decompressFromBase64(base64) : "";
+                return JSON.parse(json);
+            } catch (ex) {
+                if (!kdfs.length) {
+                    throw ex;
+                }
+            }
+        }
     }
 
     // Compares entry IDs locale-aware

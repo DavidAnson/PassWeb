@@ -118,7 +118,7 @@ File | Purpose
 -----|--------
 default.htm <br/> default.js <br/> default.css | PassWeb implementation
 offline.appcache | Offline cache manifest
-react.min.js <br/> react-dom.min.js <br/> lz-string.min.js <br/> aes.js <br/> sha512.js <br/> | External libraries
+react.min.js <br/> react-dom.min.js <br/> lz-string.min.js <br/> aes.js <br/> pbkdf2.js <br/> sha512.js <br/> | External libraries
 favicon.ico <br/> Resources\\\*.png <br/> Resources\\\*.svg <br/> | Image resources
 App_Code\RemoteStorage.cs <br/> Web.config <br/> *App_Data\\PassWeb\\...* | ASP.NET server
 NodeJs\\server.js <br/> NodeJs\\remotestorage.js <br/> NodeJs\\storage-file.js <br/> NodeJs\\storage-blob-azure.js <br/> NodeJs\\package.json <br/> | Node.js server
