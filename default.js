@@ -873,6 +873,11 @@
                 "If you see a problem, please email me detailed steps to reproduce it."
         },
         {
+            question: "Why is it important to use HTTPS?",
+            answer: "HTTPS creates a secure connection that encrypts all data and makes it difficult for others to intercept. " +
+                "HTTPS helps verify the identity of web servers, prevents tampering with content, and will soon be supported by all major sites."
+        },
+        {
             question: "How was PassWeb developed?",
             answer: "The client is built using HTML, CSS, and JavaScript on top of the React, crypto-js, and lz-string libraries. " +
                 "The server's REST API runs on either ASP.NET or Node.js. " +

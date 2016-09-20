@@ -54,6 +54,9 @@ Sorry, your data is irretrievably lost! PassWeb's encryption algorithm is govern
 **What browsers can I use?**
 Because it's simple and standards-based, PassWeb works cross-platform on modern browsers like recent releases of Internet Explorer, Chrome, Firefox, and Safari. If you see a problem, please email me detailed steps to reproduce it.
 
+**Why is it important to use HTTPS?**
+HTTPS creates a secure connection that encrypts all data and makes it difficult for others to intercept. HTTPS helps verify the identity of web servers, prevents tampering with content, and will soon be supported by all major sites.
+
 **How was PassWeb developed?**
 The client is built using HTML, CSS, and JavaScript on top of the [React](https://facebook.github.io/react/), [crypto-js](https://code.google.com/archive/p/crypto-js/), and [lz-string](http://pieroxy.net/blog/pages/lz-string/index.html) libraries. The server's REST API runs on either ASP.NET or Node.js. Encryption uses 256-bit AES in CBC mode. Hashing uses SHA-512.
 

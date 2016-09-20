@@ -44,7 +44,7 @@ const App = React.createClass({
         <LoginForm loginForm={context.loginForm}/>
         <div className="small important">Important: Only use PassWeb on trusted devices!</div>
         <FaqList faqs={context.faqs}/>
-        <div className="small separate">Copyright &copy; 2014-2016 by <a href="//dlaa.me/">David Anson</a>.</div>
+        <div className="small separate"><a href="//github.com/DavidAnson/PassWeb">Open Source</a>. Copyright &copy; 2014-2016 by <a href="//dlaa.me/">David Anson</a>.</div>
       </div>
     ) : null;
     const mainPage = this.state.mainPageVisible ? (
