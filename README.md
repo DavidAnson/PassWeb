@@ -84,14 +84,17 @@ The client is built using HTML, CSS, and JavaScript on top of the [React](https:
   * In the Node.js implementation, this is done by changing the following variable to false in `NodeJs\remotestorage.js`:
 
     ```js
-    // Set to block the creation of new files
-    BLOCK_NEW: true,
+    // Set to block the creation of new files (set environment variable to "false" to override)
+    BLOCK_NEW: process.env.BLOCK_NEW !== "false",
     ```
+
+    Or by setting the `BLOCK_NEW` environment variable to `"false"` before starting the server.
+    This makes it easy to apply a temporary override without changing the code (such as when creating a new account).
 
 
 ## Implementation
 
-**Offline Use**
+**Offline use (optional)**
 * The encrypted data file is read from and written to both the server API and [HTML local storage](https://en.wikipedia.org/wiki/Web_storage) after every change.
 * When the server can't be reached (e.g., when offline), changes can be made locally.
 * When the server is reachable during login, local and remote changes are synchronized and both locations are updated.
@@ -100,8 +103,8 @@ The client is built using HTML, CSS, and JavaScript on top of the [React](https:
 **Account data**
 * All account data is stored in a single, compressed, encrypted file.
 * That file is encrypted using the [Advanced Encryption Standard (AES)](https://en.wikipedia.org/wiki/Advanced_Encryption_Standard) in [Cipher-Block Chaining mode (CBC)](https://en.wikipedia.org/wiki/Block_cipher_mode_of_operation) mode.
-* The 256-bit encryption key is derived from the master password used to log into PassWeb.
-* The file name is derived from the master user name and password by hashing them with [SHA-512](https://en.wikipedia.org/wiki/Secure_Hash_Algorithm).
+* The file name is derived from the master user name and password by hashing with [SHA-512](https://en.wikipedia.org/wiki/Secure_Hash_Algorithm).
+* The encryption key is derived from the master password, the domain name, and a random salt via the [PBKDF2](https://en.wikipedia.org/wiki/PBKDF2) algorithm configured for SHA-512 and 1000 iterations.
 * The data is only ever decrypted on the client; the server **never** sees the user name, password, or unencrypted data
 
 **Storage API**
@@ -110,8 +113,8 @@ The client is built using HTML, CSS, and JavaScript on top of the [React](https:
 
 **Communication**
 * Because it is always encrypted, the account data file can be transmitted via the storage API over an unsecure HTTP connection.
-* Turning on [HTTPS](https://en.wikipedia.org/wiki/HTTPS) for the storage API prevents tampering and hides the hash of the user name/password (this is enabled by default).
-* Enabling HTTPS for the PassWeb client files prevents tampering (you need to enable this on the web server).
+* Turning on [HTTPS](https://en.wikipedia.org/wiki/HTTPS) for the storage API is strongly recommended because it prevents tampering and hides the hash of the user name/password (this is enabled by default).
+* Enabling HTTPS for the PassWeb client files is also strongly recommended because it prevents tampering (this needs to be enabled on the web server).
 * Mixing HTTP/HTTPS requires the storage API support [Cross-Origin Resource Sharing (CORS)](https://en.wikipedia.org/wiki/Cross-origin_resource_sharing) and requires an update to `offline.appcache`.
 
 
@@ -132,7 +135,7 @@ LICENSE | License
 ## Ideas
 
 * Add ability to import data from other password managers
-* Convert to the [Web Cryptography API](https://www.w3.org/TR/WebCryptoAPI/) (when widely available)
+* Convert to the [Web Cryptography API](https://www.w3.org/TR/WebCryptoAPI/) (once widely available)
 
 
 ## References
