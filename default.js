@@ -395,7 +395,7 @@
                         // Pick random characters from pool
                         var i;
                         for (i = 0; i < self.passwordLength() ; i++) {
-                            password += (pool[self.getRandomInt(0, pool.length - 1)]);
+                            password += pool[self.getRandomIndex(pool.length)];
                         }
                         // Ensure at least one of each category is present
                         needsLower = self.passwordLower();
@@ -415,21 +415,25 @@
             observable.subscribe(self.generatePassword, self);
         });
 
-        // Gets a random floating-point number between 0 (inclusive) and 1 (exclusive)
-        self.getRandomFloat = function () {
+        // Gets a random index in the range [0..bound) when bound <= 256
+        self.getRandomIndex = function (bound) {
             try {
                 // No feature-detection; need to handle QuotaExceededError regardless
-                var array = new Uint32Array(1);
-                window.crypto.getRandomValues(array);
-                return (array[0] & ((1 << 30) - 1)) / (1 << 30);
+                var mask = bound - 1;
+                mask |= mask >> 1;
+                mask |= mask >> 2;
+                mask |= mask >> 4;
+                var array = new Uint8Array(1);
+                while (true) {
+                    window.crypto.getRandomValues(array);
+                    var value = array[0] & mask;
+                    if (value < bound) {
+                        return value;
+                    }
+                }
             } catch (ex) {
-                return Math.random();
+                return Math.floor(Math.random() * bound);
             }
-        };
-
-        // Gets a random integer between min and max (inclusive)
-        self.getRandomInt = function (min, max) {
-            return Math.floor((self.getRandomFloat() * (max - min + 1)) + min);
         };
     }
     var entryForm = new EntryForm();
