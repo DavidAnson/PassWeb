@@ -122,12 +122,12 @@ The client is built using HTML, CSS, and JavaScript on top of the [React](https:
 
 File | Purpose
 -----|--------
-default.htm <br/> default.js <br/> default.css | PassWeb implementation
+default.htm <br/> default.js <br/> default.css <br/> render.jsx <br/> render.js | PassWeb implementation
 offline.appcache | Offline cache manifest
-react.min.js <br/> react-dom.min.js <br/> lz-string.min.js <br/> aes.js <br/> pbkdf2.js <br/> sha512.js <br/> | External libraries
-favicon.ico <br/> Resources\\\*.png <br/> Resources\\\*.svg <br/> | Image resources
-App_Code\RemoteStorage.cs <br/> Web.config <br/> *App_Data\\PassWeb\\...* | ASP.NET server
-NodeJs\\server.js <br/> NodeJs\\remotestorage.js <br/> NodeJs\\storage-file.js <br/> NodeJs\\storage-blob-azure.js <br/> NodeJs\\package.json <br/> | Node.js server
+react.min.js <br/> react-dom.min.js <br/> lz-string.min.js <br/> aes.js <br/> pbkdf2.js <br/> sha512.js <br/> math-random-polyfill.js | External libraries
+favicon.ico <br/> Resources\\\*.png <br/> Resources\\\*.svg | Image resources
+App_Code\\RemoteStorage.cs <br/> Web.config | ASP.NET server
+NodeJs\\server.js <br/> NodeJs\\remotestorage.js <br/> NodeJs\\storage-file.js <br/> NodeJs\\storage-blob-azure.js <br/> NodeJs\\package.json | Node.js server
 Readme.md | This file
 LICENSE | License
 
