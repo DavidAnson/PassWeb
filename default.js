@@ -540,6 +540,7 @@
                         saveToLocalStorage();
                     }
                 }
+                // debugLogEntries();
             }
         } else {
             return "Unsupported schema or corrupt data.";
@@ -823,11 +824,19 @@
     // })(10000);
 
     // Outputs all entries to the console
-    //function debugLogEntries() {
-    //    userData.entries().forEach(function (entry) {
-    //        consoleLog(entry.id + ", " + entry.timestamp + ", " + entry.username + ", " + entry.password + ", " + entry.website + ", " + (entry.notes || "").split("\n"));
-    //    });
-    //}
+    // function debugLogEntries() {
+    //     var output = [];
+    //     userData.entries().forEach(function (entry) {
+    //         var parts = [];
+    //         parts.push(entry.id);
+    //         parts.push("Username: " + entry.username);
+    //         parts.push("Password: " + entry.password);
+    //         entry.website && parts.push(entry.website);
+    //         entry.notes && parts.push(entry.notes);
+    //         output.push(parts.join("\n"));
+    //     });
+    //     consoleLog(output.join("\n===\n"));
+    // }
 
     // FAQ items
     var faqs = [
